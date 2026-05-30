@@ -1,0 +1,136 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        // ── ESP32 Firmware ────────────────────────────────────────────
+        {
+            "label": "ESP32: Build Firmware",
+            "type": "shell",
+            "command": "idf.py build",
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": ["relative", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.+):(\\d+):(\\d+):\\s+(warning|error):\\s+(.+)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+        },
+        {
+            "label": "ESP32: Flash",
+            "type": "shell",
+            "command": "idf.py -p ${config:idf.port} flash",
+            "options": { "cwd": "${workspaceFolder}" },
+            "dependsOn": "ESP32: Build Firmware",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "ESP32: Flash and Monitor",
+            "type": "shell",
+            "command": "idf.py -p ${config:idf.port} flash monitor",
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "ESP32: Monitor Serial",
+            "type": "shell",
+            "command": "idf.py -p ${config:idf.port} monitor",
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "ESP32: Emulate (QEMU)",
+            "type": "shell",
+            "command": "idf.py qemu monitor",
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": "test",
+            "problemMatcher": []
+        },
+        // ── Host-native Tests (Conan + CMake + Catch2) ────────────────
+        {
+            "label": "Tests: Install Conan Dependencies",
+            "type": "shell",
+            "command": "conan install . --output-folder=build/debug --build=missing -s build_type=Debug",
+            "options": { "cwd": "${workspaceFolder}/tests" },
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Tests: Configure (CMake)",
+            "type": "shell",
+            "command": "cmake --preset native-debug",
+            "options": { "cwd": "${workspaceFolder}/tests" },
+            "dependsOn": "Tests: Install Conan Dependencies",
+            "group": "build",
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Tests: Build",
+            "type": "shell",
+            "command": "cmake --build --preset native-debug",
+            "options": { "cwd": "${workspaceFolder}/tests" },
+            "dependsOn": "Tests: Configure (CMake)",
+            "group": "build",
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Tests: Run",
+            "type": "shell",
+            "command": "ctest --preset native-debug --output-on-failure",
+            "options": { "cwd": "${workspaceFolder}/tests" },
+            "dependsOn": "Tests: Build",
+            "group": { "kind": "test", "isDefault": true },
+            "problemMatcher": []
+        },
+        // ── Linting (clang-format + clang-tidy) ──────────────────────
+        {
+            "label": "Lint: Check Formatting (clang-format)",
+            "type": "shell",
+            "command": "./scripts/lint.sh",
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": "test",
+            "problemMatcher": {
+                "owner": "clang-format",
+                "fileLocation": ["relative", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.+)$",
+                    "message": 1
+                }
+            }
+        },
+        {
+            "label": "Lint: Fix Formatting (clang-format)",
+            "type": "shell",
+            "command": "./scripts/lint.sh --fix",
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Lint: Static Analysis (clang-tidy)",
+            "type": "shell",
+            "command": "conan install . --output-folder=build/lint --build=missing -s build_type=Debug -q && cmake --preset native-lint && cmake --build --preset native-lint",
+            "options": { "cwd": "${workspaceFolder}/tests" },
+            "group": "test",
+            "problemMatcher": {
+                "owner": "clang-tidy",
+                "fileLocation": ["absolute"],
+                "pattern": {
+                    "regexp": "^(.+):(\\d+):(\\d+):\\s+(warning|error):\\s+(.+)\\[(.+)\\]$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5, "code": 6
+                }
+            }
+        },
+        {
+            "label": "Lint: All",
+            "dependsOn": ["Lint: Check Formatting (clang-format)", "Lint: Static Analysis (clang-tidy)"],
+            "dependsOrder": "sequence",
+            "group": "test",
+            "problemMatcher": []
+        }
+    ]
+}

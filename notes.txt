@@ -1,0 +1,6 @@
+Can you build out and initial project for developing C++, primarily for but not limited to ESP-32 micro controllers?
+I want to streamline compilation, tests, builds, emulation, flashing, debugging, and dependency management for the project.
+I would like to use Cmake and Conan.
+As part of this inital build out I would like to have a helloworld entry point and a helloworld test.
+I should be able to compile and run these in emulation.
+I should also be able to flash an attached ESP-32 via serial port.
