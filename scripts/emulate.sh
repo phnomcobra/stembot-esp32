@@ -12,12 +12,12 @@ set -euo pipefail
 source "$(dirname "$0")/_common.sh"
 _ensure_idf_env
 
-cd "$(dirname "$0")/.."}
+cd "$(dirname "$0")/.."
 
 if [ ! -f "build/stembot.bin" ]; then
     echo "Firmware binary not found — building first..."
     idf.py build
 fi
 
-echo "=== Starting QEMU emulation (Ctrl+A X to quit) ==="
-idf.py qemu monitor
+echo "=== Starting QEMU emulation (Ctrl+] to quit) ==="
+exec idf.py qemu monitor

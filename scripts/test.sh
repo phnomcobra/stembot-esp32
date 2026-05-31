@@ -10,6 +10,9 @@ TESTS_DIR="$(cd "$(dirname "$0")/.." && pwd)/tests"
 cd "$TESTS_DIR"
 
 echo "=== [1/4] Installing Conan dependencies ==="
+# Remove the auto-generated user presets file so Conan regenerates it fresh
+# for only this output folder, avoiding duplicate preset name conflicts.
+rm -f CMakeUserPresets.json
 conan install . --output-folder=build/debug --build=missing -s build_type=Debug
 
 echo ""

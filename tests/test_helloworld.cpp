@@ -1,5 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
 #include "helloworld.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("helloworld::greet constructs greeting correctly", "[helloworld]")
 {

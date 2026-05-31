@@ -61,12 +61,21 @@ _ensure_idf_env() {
 }
 
 # Ensure the Python user-level bin directory is in PATH.
-# Fixes 'conan: command not found' after 'pip install --user conan' since the
-# user scheme bin (e.g. ~/.local/bin) is not always on the default PATH.
+# Covers both 'pip install --user' and pipx installs, since both land in
+# ~/.local/bin on Linux (pipx) or ~/Library/Python/x.y/bin (macOS pip --user).
 _ensure_pip_bin() {
     if command -v conan &>/dev/null; then
         return 0
     fi
+    # pipx on Linux installs to ~/.local/bin
+    local pipx_bin="$HOME/.local/bin"
+    if [ -d "$pipx_bin" ]; then
+        export PATH="$pipx_bin:$PATH"
+        if command -v conan &>/dev/null; then
+            return 0
+        fi
+    fi
+    # fallback: pip --user scheme bin
     local user_bin
     user_bin="$(python3 -m site --user-base 2>/dev/null)/bin"
     if [ -d "$user_bin" ]; then

@@ -69,7 +69,10 @@ fi
 cd "$REPO_ROOT/tests"
 
 echo "Installing Conan dependencies for lint build..."
-conan install . --output-folder=build/lint --build=missing -s build_type=Debug -q
+# Remove the auto-generated user presets file so Conan regenerates it fresh
+# for only this output folder, avoiding duplicate preset name conflicts.
+rm -f CMakeUserPresets.json
+conan install . --output-folder=build/lint --build=missing -s build_type=Debug
 
 echo "Configuring CMake (lint preset)..."
 cmake --preset native-lint

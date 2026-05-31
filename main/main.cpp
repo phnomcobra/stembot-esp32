@@ -1,7 +1,7 @@
-#include "helloworld.h"
 #include "esp_log.h"
+#include "helloworld.h"
 
-static const char *TAG = "stembot";
+static const char* TAG = "stembot";
 
 extern "C" void app_main(void)
 {

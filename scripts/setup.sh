@@ -62,7 +62,7 @@ handle_tool() {
     local cmd="$1" brew_pkg="$2" apt_pkg="${3:-$2}"
     if command -v "$cmd" &>/dev/null; then
         printf "  [OK]      %-14s %s\n" "$cmd" "$(command -v "$cmd")"
-        [[ "$UPDATE_MODE" -eq 1 ]] && _pkg_upgrade "$brew_pkg" "$apt_pkg"
+        if [[ "$UPDATE_MODE" -eq 1 ]]; then _pkg_upgrade "$brew_pkg" "$apt_pkg"; fi
     else
         printf "  [MISSING] %-14s — %s\n" "$cmd" "$(_install_hint "$brew_pkg" "$apt_pkg")"
         if [[ "$INSTALL_MODE" -eq 1 || "$UPDATE_MODE" -eq 1 ]]; then
@@ -95,13 +95,19 @@ handle_conan() {
         printf "  [OK]      %-14s %s\n" "conan" "$(command -v conan)"
         if [[ "$UPDATE_MODE" -eq 1 ]]; then
             printf "    Upgrading conan...\n"
-            python3 -m pip install --upgrade conan
+            pipx upgrade conan
         fi
     else
-        printf "  [MISSING] %-14s — python3 -m pip install conan\n" "conan"
+        printf "  [MISSING] %-14s — pipx install conan\n" "conan"
         if [[ "$INSTALL_MODE" -eq 1 || "$UPDATE_MODE" -eq 1 ]]; then
             printf "    Installing conan...\n"
-            python3 -m pip install conan
+            # Ensure pipx is available first
+            if ! command -v pipx &>/dev/null; then
+                _pkg_install pipx pipx
+            fi
+            pipx install conan
+            # Make sure pipx-managed bins are on PATH for the rest of this session
+            export PATH="$HOME/.local/bin:$PATH"
         else
             MISSING=1
         fi
@@ -139,6 +145,38 @@ handle_idf() {
     fi
 }
 
+handle_qemu() {
+    # Requires ESP-IDF to be on PATH so idf_tools.py is reachable.
+    local idf_dir="${IDF_PATH:-$HOME/esp/esp-idf}"
+    local idf_tools="$idf_dir/tools/idf_tools.py"
+
+    # Check whether qemu-system-xtensa is already installed and functional.
+    if command -v qemu-system-xtensa &>/dev/null; then
+        printf "  [OK]      %-14s %s\n" "qemu-xtensa" "$(command -v qemu-system-xtensa)"
+        if [[ "$UPDATE_MODE" -eq 1 ]] && [ -f "$idf_tools" ]; then
+            printf "    Upgrading qemu-xtensa via idf_tools.py...\n"
+            python3 "$idf_tools" install qemu-xtensa
+        fi
+        return 0
+    fi
+
+    printf "  [MISSING] %-14s — python3 %s install qemu-xtensa\n" "qemu-xtensa" "\$IDF_PATH/tools/idf_tools.py"
+    if [[ "$INSTALL_MODE" -eq 1 || "$UPDATE_MODE" -eq 1 ]]; then
+        # libSDL2 is a runtime dependency of the pre-built QEMU binary.
+        printf "    Installing libsdl2 (QEMU runtime dependency)...\n"
+        _pkg_install sdl2 libsdl2-2.0-0
+        if [ -f "$idf_tools" ]; then
+            printf "    Installing qemu-xtensa via idf_tools.py...\n"
+            python3 "$idf_tools" install qemu-xtensa
+        else
+            echo "    WARNING: ESP-IDF not found at $idf_dir — install ESP-IDF first."
+            MISSING=1
+        fi
+    else
+        MISSING=1
+    fi
+}
+
 # ── Main ────────────────────────────────────────────────────
 
 if [[ "$INSTALL_MODE" -eq 1 || "$UPDATE_MODE" -eq 1 ]]; then
@@ -151,12 +189,15 @@ fi
 echo ""
 echo "=== Checking prerequisites ==="
 [[ "$_OS" == "macos" ]] && handle_brew
-handle_tool cmake   cmake   cmake
-handle_tool ninja   ninja   ninja-build
-handle_tool python3 python3 python3
+handle_tool cmake        cmake        cmake
+handle_tool ninja        ninja        ninja-build
+handle_tool python3      python3      python3
 handle_conan
-handle_tool git     git     git
+handle_tool git          git          git
+handle_tool clang-format llvm         clang-format
+handle_tool clang-tidy   llvm         clang-tidy
 handle_idf
+handle_qemu
 
 if [[ "$MISSING" -eq 1 ]]; then
     echo ""
