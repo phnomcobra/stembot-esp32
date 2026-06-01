@@ -1,3 +1,5 @@
 #pragma once
 
-namespace executor {}
+namespace executor
+{
+}

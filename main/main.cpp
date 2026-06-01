@@ -1,7 +1,10 @@
 #include "esp_log.h"
 #include "helloworld.h"
+#include "kvstore.h"
 
 static const char* TAG = "stembot";
+
+KVStore kvstore;
 
 extern "C" void app_main(void)
 {

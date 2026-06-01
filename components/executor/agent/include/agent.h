@@ -1,3 +1,5 @@
 #pragma once
 
-namespace agent {}
+namespace agent
+{
+}
