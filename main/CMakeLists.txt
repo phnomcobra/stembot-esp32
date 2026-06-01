@@ -4,4 +4,5 @@ idf_component_register(
     REQUIRES helloworld
     REQUIRES kvstore
     REQUIRES executor
+    REQUIRES models
 )
