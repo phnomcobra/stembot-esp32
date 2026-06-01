@@ -1,0 +1,62 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "native-debug",
+            "displayName": "Native Debug",
+            "description": "Build host tests with debug symbols",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/build/debug/conan_toolchain.cmake"
+            }
+        },
+        {
+            "name": "native-release",
+            "displayName": "Native Release",
+            "description": "Build host tests optimised",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/build/release/conan_toolchain.cmake"
+            }
+        },
+        {
+            "name": "native-lint",
+            "displayName": "Native Lint",
+            "description": "Build with clang-tidy static analysis enabled",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/lint",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/build/lint/conan_toolchain.cmake",
+                "ENABLE_CLANG_TIDY": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "native-debug",
+            "configurePreset": "native-debug"
+        },
+        {
+            "name": "native-release",
+            "configurePreset": "native-release"
+        },
+        {
+            "name": "native-lint",
+            "configurePreset": "native-lint"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "native-debug",
+            "configurePreset": "native-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        }
+    ]
+}

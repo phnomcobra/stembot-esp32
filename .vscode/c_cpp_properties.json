@@ -1,0 +1,30 @@
+{
+    "configurations": [
+        {
+            "name": "ESP32 (IDF)",
+            "compilerPath": "${env:HOME}/.espressif/tools/xtensa-esp-elf/esp-15.2.0_20251204/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-arm",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${env:HOME}/esp/esp-idf/components/*/include",
+                "${env:HOME}/esp/esp-idf/components/**",
+                "${workspaceFolder}/build/config"
+            ]
+        },
+        {
+            // Host-native tests — uses the system compiler on Linux.
+            "name": "Native (Tests)",
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x64",
+            "includePath": [
+                "${workspaceFolder}/components/**",
+                "${workspaceFolder}/tests/build/debug"
+            ]
+        }
+    ],
+    "version": 4
+}

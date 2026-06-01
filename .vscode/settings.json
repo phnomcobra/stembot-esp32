@@ -1,0 +1,23 @@
+{
+    // --- ESP-IDF extension ---
+    // Update idf.port to match your device (ls /dev/tty.* to discover it).
+    "idf.port": "/dev/tty.usbserial-0001",
+    "idf.espIdfPath": "${env:IDF_PATH}",
+    "idf.toolsPath": "${env:HOME}/.espressif",
+    "idf.openOcdConfigs": [
+        "board/esp32-wrover-kit-3.3v.cfg"
+    ],
+
+    // --- C/C++ IntelliSense ---
+    // The ESP-IDF extension manages include paths for firmware code.
+    "C_Cpp.default.configurationProvider": "espressif.esp-idf-extension",
+
+    // --- CMake Tools (used for the tests/ sub-project) ---
+    "cmake.sourceDirectory": "${workspaceFolder}/tests",
+    "cmake.buildDirectory": "${workspaceFolder}/tests/build/debug",
+
+    // Treat bare .h files as C++
+    "files.associations": {
+        "*.h": "cpp"
+    }
+}
