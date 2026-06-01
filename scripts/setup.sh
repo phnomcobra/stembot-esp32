@@ -116,13 +116,15 @@ handle_conan() {
 
 handle_idf() {
     local idf_dir="${IDF_PATH:-$HOME/esp/esp-idf}"
-    if [ -n "${IDF_PATH:-}" ]; then
-        printf "  [OK]      %-14s IDF_PATH=%s\n" "idf.py" "$IDF_PATH"
+    # Consider IDF present if IDF_PATH is set, idf.py is on PATH, or the
+    # default install directory exists (export.sh not yet sourced in this shell).
+    if [ -n "${IDF_PATH:-}" ] || command -v idf.py &>/dev/null || [ -f "$idf_dir/export.sh" ]; then
+        printf "  [OK]      %-14s %s\n" "idf.py" "$idf_dir"
         if [[ "$UPDATE_MODE" -eq 1 ]]; then
-            printf "    Updating ESP-IDF at %s...\n" "$IDF_PATH"
-            git -C "$IDF_PATH" pull
-            git -C "$IDF_PATH" submodule update --init --recursive
-            "$IDF_PATH/install.sh" all
+            printf "    Updating ESP-IDF at %s...\n" "$idf_dir"
+            git -C "$idf_dir" pull
+            git -C "$idf_dir" submodule update --init --recursive
+            "$idf_dir/install.sh" all
         fi
     else
         printf "  [MISSING] %-14s\n" "idf.py"
@@ -146,13 +148,21 @@ handle_idf() {
 }
 
 handle_qemu() {
-    # Requires ESP-IDF to be on PATH so idf_tools.py is reachable.
     local idf_dir="${IDF_PATH:-$HOME/esp/esp-idf}"
     local idf_tools="$idf_dir/tools/idf_tools.py"
+    local espressif_qemu_dir="$HOME/.espressif/tools/qemu-xtensa"
 
-    # Check whether qemu-system-xtensa is already installed and functional.
+    # Check PATH first; if not there, search the known espressif tools directory
+    # (qemu-xtensa is only added to PATH after sourcing export.sh).
+    local qemu_bin=""
     if command -v qemu-system-xtensa &>/dev/null; then
-        printf "  [OK]      %-14s %s\n" "qemu-xtensa" "$(command -v qemu-system-xtensa)"
+        qemu_bin="$(command -v qemu-system-xtensa)"
+    elif [ -d "$espressif_qemu_dir" ]; then
+        qemu_bin="$(find "$espressif_qemu_dir" -name "qemu-system-xtensa" -type f 2>/dev/null | head -1)"
+    fi
+
+    if [ -n "$qemu_bin" ]; then
+        printf "  [OK]      %-14s %s\n" "qemu-xtensa" "$qemu_bin"
         if [[ "$UPDATE_MODE" -eq 1 ]] && [ -f "$idf_tools" ]; then
             printf "    Upgrading qemu-xtensa via idf_tools.py...\n"
             python3 "$idf_tools" install qemu-xtensa

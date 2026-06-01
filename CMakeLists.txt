@@ -10,4 +10,4 @@ cmake_minimum_required(VERSION 3.16)
 # For host-native tests see tests/ (CMake + Conan).
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-project(stembot)
+project(stembot VERSION 0.1.0)
