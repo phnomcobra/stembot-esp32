@@ -1,9 +1,8 @@
-#include <cstring>
+#include "kvstore.h"
 
 #include "esp_log.h"
 
-#include "kvstore.h"
-
+#include <cstring>
 
 static const char* TAG = "KVStore";
 

@@ -1,9 +1,9 @@
 #pragma once
 
+#include "kvstore.h"
+
 #include <cstdint>
 #include <string>
-
-#include "kvstore.h"
 
 class Config
 {
@@ -11,7 +11,7 @@ class Config
     Config();
     ~Config();
 
-    char    agtuuid[36];
+    char agtuuid[36];
     uint8_t key[32];
 
   private:
