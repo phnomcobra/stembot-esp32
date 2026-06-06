@@ -2,16 +2,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            // Debug firmware on-device via OpenOCD + GDB.
-            // Requires the ESP-IDF extension and an attached JTAG debugger.
-            "name": "ESP32: Debug via OpenOCD",
-            "type": "espidf",
-            "request": "launch",
-            "debugPort": 45000,
-            "mode": "auto",
-            "env": {}
-        },
-        {
             // Debug host-native tests with LLDB on macOS.
             // Run "Tests: Build" first or set preLaunchTask.
             "name": "Tests: Debug (Native)",
