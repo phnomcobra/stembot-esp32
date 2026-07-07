@@ -39,7 +39,7 @@ _pkg_install() {
     local brew_pkg="$1" apt_pkg="${2:-$1}"
     printf "    Installing %s...\n" "$brew_pkg"
     case "$_OS" in
-        macos) brew install "$brew_pkg" ;;
+        macos) echo y | HOMEBREW_CURL_RETRIES=3 brew install "$brew_pkg" ;;
         linux) sudo apt-get install -y "$apt_pkg" ;;
         *)     echo "    Unsupported OS — install $apt_pkg manually"; return 1 ;;
     esac
@@ -49,7 +49,7 @@ _pkg_upgrade() {
     local brew_pkg="$1" apt_pkg="${2:-$1}"
     printf "    Upgrading %s...\n" "$brew_pkg"
     case "$_OS" in
-        macos) brew upgrade "$brew_pkg" || true ;;  # exits 1 when already up-to-date
+        macos) echo y | HOMEBREW_CURL_RETRIES=3 brew upgrade "$brew_pkg" || true ;;  # exits 1 when already up-to-date
         linux) sudo apt-get install --only-upgrade -y "$apt_pkg" ;;
         *)     echo "    Unsupported OS — upgrade $apt_pkg manually"; return 1 ;;
     esac
