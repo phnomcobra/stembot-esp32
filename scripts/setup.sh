@@ -128,9 +128,13 @@ handle_idf() {
             git -C "$idf_dir" pull
             git -C "$idf_dir" submodule update --init --recursive
             "$idf_dir/install.sh" all
-        elif [[ "$INSTALL_MODE" -eq 1 ]] && { [ ! -d "$python_env_dir" ] || [ -z "$(ls -A "$python_env_dir" 2>/dev/null)" ]; }; then
-            printf "    ESP-IDF tools not installed — running install.sh all...\n"
-            "$idf_dir/install.sh" all
+        elif [[ "$INSTALL_MODE" -eq 1 ]]; then
+            printf "    Ensuring ESP-IDF submodules are initialised...\n"
+            git -C "$idf_dir" submodule update --init --recursive
+            if [ ! -d "$python_env_dir" ] || [ -z "$(ls -A "$python_env_dir" 2>/dev/null)" ]; then
+                printf "    ESP-IDF tools not installed — running install.sh all...\n"
+                "$idf_dir/install.sh" all
+            fi
         fi
     else
         printf "  [MISSING] %-14s\n" "idf.py"
