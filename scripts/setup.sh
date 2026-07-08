@@ -120,10 +120,16 @@ handle_idf() {
     # default install directory exists (export.sh not yet sourced in this shell).
     if [ -n "${IDF_PATH:-}" ] || command -v idf.py &>/dev/null || [ -f "$idf_dir/export.sh" ]; then
         printf "  [OK]      %-14s %s\n" "idf.py" "$idf_dir"
+        # Run install.sh if the Python virtual environment hasn't been created yet,
+        # or if we're in update mode.
+        local python_env_dir="$HOME/.espressif/python_env"
         if [[ "$UPDATE_MODE" -eq 1 ]]; then
             printf "    Updating ESP-IDF at %s...\n" "$idf_dir"
             git -C "$idf_dir" pull
             git -C "$idf_dir" submodule update --init --recursive
+            "$idf_dir/install.sh" all
+        elif [[ "$INSTALL_MODE" -eq 1 ]] && { [ ! -d "$python_env_dir" ] || [ -z "$(ls -A "$python_env_dir" 2>/dev/null)" ]; }; then
+            printf "    ESP-IDF tools not installed — running install.sh all...\n"
             "$idf_dir/install.sh" all
         fi
     else
@@ -165,7 +171,9 @@ handle_qemu() {
         printf "  [OK]      %-14s %s\n" "qemu-xtensa" "$qemu_bin"
         if [[ "$UPDATE_MODE" -eq 1 ]] && [ -f "$idf_tools" ]; then
             printf "    Upgrading qemu-xtensa via idf_tools.py...\n"
-            python3 "$idf_tools" install qemu-xtensa
+            rm -f "$HOME/.espressif/dist/qemu-xtensa-"*
+            python3 "$idf_tools" install qemu-xtensa || \
+                echo "    WARNING: qemu-xtensa install failed (the pre-built binary may not support this CPU). Emulation will be unavailable."
         fi
         return 0
     fi
@@ -177,7 +185,9 @@ handle_qemu() {
         _pkg_install sdl2 libsdl2-2.0-0
         if [ -f "$idf_tools" ]; then
             printf "    Installing qemu-xtensa via idf_tools.py...\n"
-            python3 "$idf_tools" install qemu-xtensa
+            rm -f "$HOME/.espressif/dist/qemu-xtensa-"*
+            python3 "$idf_tools" install qemu-xtensa || \
+                echo "    WARNING: qemu-xtensa install failed (the pre-built binary may not support this CPU). Emulation will be unavailable."
         else
             echo "    WARNING: ESP-IDF not found at $idf_dir — install ESP-IDF first."
             MISSING=1
@@ -194,6 +204,10 @@ if [[ "$INSTALL_MODE" -eq 1 || "$UPDATE_MODE" -eq 1 ]]; then
     echo "=== Updating package index ==="
     handle_brew  # ensure brew exists on macOS before updating index
     _pkg_update_index
+
+    echo ""
+    echo "=== Updating pip certificates ==="
+    python3 -m pip install --upgrade pip-system-certs certifi
 fi
 
 echo ""
