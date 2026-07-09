@@ -9,15 +9,16 @@ case "$(uname -s)" in
     *)      _OS="unknown" ;;
 esac
 
-# On macOS, ensure the C++ standard library headers from the active SDK are on
-# the include path.  macOS 26 (Tahoe) reorganised the CLT so that the full
-# libc++ headers live only in the SDK-specific directory; without this, the
-# compiler finds the generic CLT path (only ~11 internal helper headers) and
-# fails to locate <vector>, <chrono>, etc.
+# On macOS, ensure the compiler uses the full SDK headers.  macOS 26 (Tahoe)
+# reorganised the CLT so that the full libc++ headers live only in the
+# SDK-specific directory; without SDKROOT the compiler falls back to a minimal
+# stub directory (~11 helper headers) and fails to locate <vector>, <chrono>,
+# etc.  Using SDKROOT (rather than CPLUS_INCLUDE_PATH) keeps the C and C++
+# header search order intact so that #include_next works correctly.
 if [[ "$_OS" == "macos" ]] && command -v xcrun &>/dev/null; then
-    _sdk_cxx="$(xcrun --show-sdk-path 2>/dev/null)/usr/include/c++/v1"
-    if [[ -d "$_sdk_cxx" && -f "$_sdk_cxx/vector" ]]; then
-        export CPLUS_INCLUDE_PATH="${CPLUS_INCLUDE_PATH:+$CPLUS_INCLUDE_PATH:}$_sdk_cxx"
+    _sdk_root="$(xcrun --show-sdk-path 2>/dev/null)"
+    if [[ -d "$_sdk_root" ]]; then
+        export SDKROOT="$_sdk_root"
     fi
 fi
 
