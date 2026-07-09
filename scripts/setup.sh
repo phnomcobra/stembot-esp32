@@ -162,13 +162,35 @@ handle_qemu() {
     local idf_tools="$idf_dir/tools/idf_tools.py"
     local espressif_qemu_dir="$HOME/.espressif/tools/qemu-xtensa"
 
-    # Check PATH first; if not there, search the known espressif tools directory
-    # (qemu-xtensa is only added to PATH after sourcing export.sh).
+    # Check PATH first; if not there, ask idf_tools.py for the extended tools
+    # PATH (the same mechanism idf.py uses) and re-check, then fall back to a
+    # recursive find under ~/.espressif/tools/.
     local qemu_bin=""
     if command -v qemu-system-xtensa &>/dev/null; then
         qemu_bin="$(command -v qemu-system-xtensa)"
-    elif [ -d "$espressif_qemu_dir" ]; then
-        qemu_bin="$(find "$espressif_qemu_dir" -name "qemu-system-xtensa" -type f 2>/dev/null | head -1)"
+    elif [ -f "$idf_tools" ]; then
+        local _idf_export
+        _idf_export="$(python3 "$idf_tools" export --format sh 2>/dev/null || true)"
+        if [ -n "$_idf_export" ]; then
+            local _saved_path="$PATH"
+            eval "$_idf_export" 2>/dev/null || true
+            if command -v qemu-system-xtensa &>/dev/null; then
+                qemu_bin="$(command -v qemu-system-xtensa)"
+            fi
+            PATH="$_saved_path"
+        fi
+    fi
+    if [ -z "$qemu_bin" ]; then
+        qemu_bin="$(find "$HOME/.espressif/tools" -name "qemu-system-xtensa" -type f 2>/dev/null | head -1)"
+    fi
+
+    # Verify the binary actually executes — a stale binary from a previous
+    # machine (e.g., x86_64 binary brought to an Apple Silicon machine) would
+    # be found by 'find' but fail to run.  Clear it so the install path fires.
+    if [ -n "$qemu_bin" ] && ! "$qemu_bin" --version &>/dev/null; then
+        printf "  [WARN]    %-14s — found at %s but fails to run; will reinstall\n" "qemu-xtensa" "$qemu_bin"
+        rm -rf "$(dirname "$(dirname "$qemu_bin")")" 2>/dev/null || true
+        qemu_bin=""
     fi
 
     if [ -n "$qemu_bin" ]; then
@@ -177,12 +199,12 @@ handle_qemu() {
             printf "    Upgrading qemu-xtensa via idf_tools.py...\n"
             rm -f "$HOME/.espressif/dist/qemu-xtensa-"*
             python3 "$idf_tools" install qemu-xtensa || \
-                echo "    WARNING: qemu-xtensa install failed (the pre-built binary may not support this CPU). Emulation will be unavailable."
+                echo "    WARNING: qemu-xtensa upgrade failed (the pre-built binary may not support this CPU). Emulation will be unavailable."
         fi
         return 0
     fi
 
-    printf "  [MISSING] %-14s — python3 %s install qemu-xtensa\n" "qemu-xtensa" "\$IDF_PATH/tools/idf_tools.py"
+    printf "  [WARN]    %-14s — not found (emulation unavailable); install with: python3 %s install qemu-xtensa\n" "qemu-xtensa" "\$IDF_PATH/tools/idf_tools.py"
     if [[ "$INSTALL_MODE" -eq 1 || "$UPDATE_MODE" -eq 1 ]]; then
         # libSDL2 is a runtime dependency of the pre-built QEMU binary.
         printf "    Installing libsdl2 (QEMU runtime dependency)...\n"
@@ -190,15 +212,111 @@ handle_qemu() {
         if [ -f "$idf_tools" ]; then
             printf "    Installing qemu-xtensa via idf_tools.py...\n"
             rm -f "$HOME/.espressif/dist/qemu-xtensa-"*
-            python3 "$idf_tools" install qemu-xtensa || \
-                echo "    WARNING: qemu-xtensa install failed (the pre-built binary may not support this CPU). Emulation will be unavailable."
+            if python3 "$idf_tools" install qemu-xtensa 2>&1; then
+                : # success — nothing more to do
+            else
+                # idf_tools.py removed the version directory after its
+                # verification step failed. Common causes on macOS:
+                #   1) The "x86_64" tarball actually contains an arm64 binary
+                #      (confirmed Espressif packaging bug in 20260417).
+                #   2) macOS quarantine blocks execution of the binary.
+                # Strategy: detect the arm64-in-x86_64 case and fall back to
+                # the previous release (20250817) which ships a genuine x86_64
+                # binary, installed into the directory that idf_tools.py expects.
+                printf "    idf_tools.py verification failed — checking binary architecture...\n"
+
+                # Determine the version idf_tools expects for qemu-xtensa.
+                local _qemu_ver
+                _qemu_ver="$(python3 "$idf_tools" list 2>/dev/null \
+                    | grep -A1 '^\* qemu-xtensa' | awk '/recommended/{print $2}' \
+                    | tr -d '()')"
+                # Fallback: parse directly from tools.json if list output differs.
+                if [ -z "$_qemu_ver" ] && [ -f "$idf_dir/tools/tools.json" ]; then
+                    _qemu_ver="$(python3 - <<'EOF'
+import json, sys
+data = json.load(open(sys.argv[1]))
+for t in data.get("tools", []):
+    if t.get("name") == "qemu-xtensa":
+        for v in t.get("versions", []):
+            if v.get("status") == "recommended":
+                print(v["name"]); sys.exit(0)
+EOF
+                    "$idf_dir/tools/tools.json" 2>/dev/null)"
+                fi
+
+                local _qemu_dest="$espressif_qemu_dir/${_qemu_ver:-esp_develop_9.2.2_20260417}"
+
+                # Re-extract the downloaded tarball (still in dist/) to inspect it.
+                local _qemu_tarball
+                _qemu_tarball="$(find "$HOME/.espressif/dist" \
+                    -name "qemu-xtensa-*x86_64-apple-darwin.tar.xz" \
+                    2>/dev/null | head -1)"
+
+                if [ -n "$_qemu_tarball" ] && [ -f "$_qemu_tarball" ]; then
+                    mkdir -p "$_qemu_dest"
+                    tar -xJf "$_qemu_tarball" -C "$_qemu_dest" --strip-components=1
+
+                    local _qemu_bin="$_qemu_dest/bin/qemu-system-xtensa"
+                    local _actual_arch
+                    _actual_arch="$(file "$_qemu_bin" 2>/dev/null)"
+
+                    # The fallback only applies when running on Intel (x86_64) and
+                    # the downloaded binary is arm64 — an Espressif packaging bug
+                    # specific to certain releases.  On Apple Silicon (arm64) an
+                    # arm64 binary is correct and idf_tools.py failure means
+                    # something else is wrong.
+                    local _host_arch
+                    _host_arch="$(uname -m)"  # x86_64 on Intel, arm64 on Apple Silicon
+
+                    if [[ "$_host_arch" == "x86_64" ]] && echo "$_actual_arch" | grep -q "arm64"; then
+                        # Confirmed packaging bug: arm64 binary in x86_64 tarball.
+                        # Download the last release that shipped a real x86_64 binary.
+                        printf "    Detected arm64-in-x86_64 tarball (Espressif packaging bug).\n"
+                        printf "    Downloading fallback release esp_develop_9.2.2_20250817...\n"
+                        rm -rf "$_qemu_dest"
+
+                        local _fallback_url="https://github.com/espressif/qemu/releases/download/esp-develop-9.2.2-20250817/qemu-xtensa-softmmu-esp_develop_9.2.2_20250817-x86_64-apple-darwin.tar.xz"
+                        local _fallback_tar="$HOME/.espressif/dist/qemu-xtensa-fallback-x86_64-apple-darwin.tar.xz"
+                        curl -L --progress-bar "$_fallback_url" -o "$_fallback_tar" || true
+
+                        if [ -f "$_fallback_tar" ]; then
+                            # Install missing Homebrew runtime deps for the binary.
+                            printf "    Installing QEMU runtime dependencies (pixman libgcrypt glib gettext)...\n"
+                            echo y | HOMEBREW_CURL_RETRIES=3 brew install pixman libgcrypt glib gettext || true
+
+                            mkdir -p "$_qemu_dest"
+                            tar -xJf "$_fallback_tar" -C "$_qemu_dest" --strip-components=1
+                            xattr -dr com.apple.quarantine "$_qemu_dest" 2>/dev/null || true
+
+                            if "$_qemu_dest/bin/qemu-system-xtensa" --version &>/dev/null; then
+                                printf "    qemu-xtensa (fallback x86_64 build) installed successfully.\n"
+                            else
+                                rm -rf "$_qemu_dest"
+                                echo "    WARNING: fallback qemu-xtensa binary failed to run. Emulation will be unavailable."
+                            fi
+                        else
+                            echo "    WARNING: could not download fallback qemu-xtensa. Emulation will be unavailable."
+                        fi
+                    else
+                        # Binary is the right arch — quarantine was the blocker.
+                        xattr -dr com.apple.quarantine "$_qemu_dest" 2>/dev/null || true
+                        if "$_qemu_bin" --version &>/dev/null; then
+                            printf "    qemu-xtensa installed successfully (quarantine removed).\n"
+                        else
+                            rm -rf "$_qemu_dest"
+                            echo "    WARNING: qemu-xtensa binary failed to run. Emulation will be unavailable."
+                        fi
+                    fi
+                else
+                    echo "    WARNING: qemu-xtensa tarball not found in dist cache. Emulation will be unavailable."
+                fi
+            fi
         else
             echo "    WARNING: ESP-IDF not found at $idf_dir — install ESP-IDF first."
             MISSING=1
         fi
-    else
-        MISSING=1
     fi
+    # QEMU is optional — its absence does not block other workflows.
 }
 
 # ── Main ────────────────────────────────────────────────────

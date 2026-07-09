@@ -12,7 +12,17 @@ set -euo pipefail
 source "$(dirname "$0")/_common.sh"
 _ensure_idf_env
 
-cd "$(dirname "$0")/.."
+# Verify qemu-system-xtensa is available before attempting emulation.
+if ! command -v qemu-system-xtensa &>/dev/null; then
+    # Also search the espressif tools directory (not on PATH until export.sh is sourced).
+    _qemu_bin="$(find "$HOME/.espressif/tools/qemu-xtensa" -name "qemu-system-xtensa" -type f 2>/dev/null | head -1)"
+    if [ -z "$_qemu_bin" ]; then
+        echo "ERROR: qemu-system-xtensa is not installed or is not supported on this platform."
+        echo "The pre-built Espressif QEMU binary for this release may not support your CPU."
+        echo "See: https://github.com/espressif/qemu/releases"
+        exit 1
+    fi
+fi
 
 if [ ! -f "build/stembot.bin" ]; then
     echo "Firmware binary not found — building first..."
