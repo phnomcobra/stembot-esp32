@@ -9,6 +9,18 @@ case "$(uname -s)" in
     *)      _OS="unknown" ;;
 esac
 
+# On macOS, ensure the C++ standard library headers from the active SDK are on
+# the include path.  macOS 26 (Tahoe) reorganised the CLT so that the full
+# libc++ headers live only in the SDK-specific directory; without this, the
+# compiler finds the generic CLT path (only ~11 internal helper headers) and
+# fails to locate <vector>, <chrono>, etc.
+if [[ "$_OS" == "macos" ]] && command -v xcrun &>/dev/null; then
+    _sdk_cxx="$(xcrun --show-sdk-path 2>/dev/null)/usr/include/c++/v1"
+    if [[ -d "$_sdk_cxx" && -f "$_sdk_cxx/vector" ]]; then
+        export CPLUS_INCLUDE_PATH="${CPLUS_INCLUDE_PATH:+$CPLUS_INCLUDE_PATH:}$_sdk_cxx"
+    fi
+fi
+
 # Print the default serial port for the detected platform.
 # Callers should prefer the STEMBOT_PORT environment variable over this value.
 _default_port() {
