@@ -32,11 +32,22 @@ Config::Config()
     {
         memcpy(key, stored_key.data(), std::min(stored_key.size(), sizeof(key)));
     }
-    
+
     Config::peerUrl = Config::_kvstore.getString("peer_url", "");
+    Config::wifiSSID = Config::_kvstore.getString("wifi_ssid", "");
+    Config::wifiPassword = Config::_kvstore.getString("wifi_password", "");
 }
 
 Config::~Config()
 {
     Config::_kvstore.end();
+}
+
+void Config::save()
+{
+    Config::_kvstore.putString("agtuuid", agtuuid);
+    Config::_kvstore.putBytes("key", key, sizeof(key));
+    Config::_kvstore.putString("peer_url", peerUrl);
+    Config::_kvstore.putString("wifi_ssid", wifiSSID);
+    Config::_kvstore.putString("wifi_password", wifiPassword);
 }

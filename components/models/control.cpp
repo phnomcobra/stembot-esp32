@@ -143,3 +143,284 @@ GetPeers GetPeers::from_json(const std::string& json)
     f.coluuid = get_opt_str(doc["coluuid"]);
     return f;
 }
+
+// ── Route ─────────────────────────────────────────────────────────────────────
+
+std::string Route::to_json() const
+{
+    JsonDocument doc;
+    doc["agtuuid"] = agtuuid;
+    doc["gtwuuid"] = gtwuuid;
+    doc["weight"] = weight;
+    set_opt_str(doc, "objuuid", objuuid);
+    set_opt_str(doc, "coluuid", coluuid);
+    std::string out;
+    serializeJson(doc, out);
+    return out;
+}
+
+Route Route::from_json(const std::string& json)
+{
+    Route r;
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    r.agtuuid = doc["agtuuid"] | std::string{};
+    r.gtwuuid = doc["gtwuuid"] | std::string{};
+    r.weight = doc["weight"] | int64_t{0};
+    r.objuuid = get_opt_str(doc["objuuid"]);
+    r.coluuid = get_opt_str(doc["coluuid"]);
+    return r;
+}
+
+// ── GetRoutes ─────────────────────────────────────────────────────────────────
+
+std::string GetRoutes::to_json() const
+{
+    JsonDocument doc;
+    doc["type"] = "get_routes";
+    JsonArray arr = doc["routes"].to<JsonArray>();
+    for (const Route& route : routes)
+    {
+        JsonDocument rdoc;
+        deserializeJson(rdoc, route.to_json());
+        arr.add(rdoc.as<JsonObject>());
+    }
+    set_opt_str(doc, "error", error);
+    set_opt_str(doc, "objuuid", objuuid);
+    set_opt_str(doc, "coluuid", coluuid);
+    std::string out;
+    serializeJson(doc, out);
+    return out;
+}
+
+GetRoutes GetRoutes::from_json(const std::string& json)
+{
+    GetRoutes f;
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    for (JsonVariant rv : doc["routes"].as<JsonArray>())
+    {
+        std::string rj;
+        serializeJson(rv, rj);
+        f.routes.push_back(Route::from_json(rj));
+    }
+    f.error = get_opt_str(doc["error"]);
+    f.objuuid = get_opt_str(doc["objuuid"]);
+    f.coluuid = get_opt_str(doc["coluuid"]);
+    return f;
+}
+
+// ── CreatePeer ────────────────────────────────────────────────────────────────
+
+std::string CreatePeer::to_json() const
+{
+    JsonDocument doc;
+    doc["type"] = "create_peer";
+    doc["agtuuid"] = agtuuid;
+    doc["polling"] = polling;
+    set_opt_str(doc, "url", url);
+    set_opt_f64(doc, "ttl", ttl);
+    set_opt_str(doc, "error", error);
+    set_opt_str(doc, "objuuid", objuuid);
+    set_opt_str(doc, "coluuid", coluuid);
+    std::string out;
+    serializeJson(doc, out);
+    return out;
+}
+
+CreatePeer CreatePeer::from_json(const std::string& json)
+{
+    CreatePeer f;
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    f.agtuuid = doc["agtuuid"] | std::string{};
+    f.polling = doc["polling"] | false;
+    f.url = get_opt_str(doc["url"]);
+    f.ttl = get_opt_f64(doc["ttl"]);
+    f.error = get_opt_str(doc["error"]);
+    f.objuuid = get_opt_str(doc["objuuid"]);
+    f.coluuid = get_opt_str(doc["coluuid"]);
+    return f;
+}
+
+// ── DiscoverPeer ──────────────────────────────────────────────────────────────
+
+std::string DiscoverPeer::to_json() const
+{
+    JsonDocument doc;
+    doc["type"] = "discover_peer";
+    doc["url"] = url;
+    doc["polling"] = polling;
+    set_opt_str(doc, "agtuuid", agtuuid);
+    set_opt_f64(doc, "ttl", ttl);
+    set_opt_str(doc, "error", error);
+    set_opt_str(doc, "objuuid", objuuid);
+    set_opt_str(doc, "coluuid", coluuid);
+    std::string out;
+    serializeJson(doc, out);
+    return out;
+}
+
+DiscoverPeer DiscoverPeer::from_json(const std::string& json)
+{
+    DiscoverPeer f;
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    f.url = doc["url"] | std::string{};
+    f.polling = doc["polling"] | false;
+    f.agtuuid = get_opt_str(doc["agtuuid"]);
+    f.ttl = get_opt_f64(doc["ttl"]);
+    f.error = get_opt_str(doc["error"]);
+    f.objuuid = get_opt_str(doc["objuuid"]);
+    f.coluuid = get_opt_str(doc["coluuid"]);
+    return f;
+}
+
+// ── DeletePeers ───────────────────────────────────────────────────────────────
+
+std::string DeletePeers::to_json() const
+{
+    JsonDocument doc;
+    doc["type"] = "delete_peers";
+    if (agtuuids.empty())
+    {
+        doc["agtuuids"] = nullptr;
+    }
+    else
+    {
+        JsonArray arr = doc["agtuuids"].to<JsonArray>();
+        for (const std::string& id : agtuuids)
+        {
+            arr.add(id);
+        }
+    }
+    set_opt_str(doc, "error", error);
+    set_opt_str(doc, "objuuid", objuuid);
+    set_opt_str(doc, "coluuid", coluuid);
+    std::string out;
+    serializeJson(doc, out);
+    return out;
+}
+
+DeletePeers DeletePeers::from_json(const std::string& json)
+{
+    DeletePeers f;
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    if (!doc["agtuuids"].isNull())
+    {
+        for (JsonVariant v : doc["agtuuids"].as<JsonArray>())
+        {
+            f.agtuuids.push_back(v.as<std::string>());
+        }
+    }
+    f.error = get_opt_str(doc["error"]);
+    f.objuuid = get_opt_str(doc["objuuid"]);
+    f.coluuid = get_opt_str(doc["coluuid"]);
+    return f;
+}
+
+// ── SyncProcess ───────────────────────────────────────────────────────────────
+
+std::string SyncProcess::to_json() const
+{
+    JsonDocument doc;
+    doc["type"] = "sync_process";
+    doc["command"] = command;
+    doc["timeout"] = timeout;
+    set_opt_str(doc, "stdout", stdout_output);
+    set_opt_str(doc, "stderr", stderr_output);
+    set_opt_i64(doc, "status", status);
+    set_opt_f64(doc, "start_time", start_time);
+    set_opt_f64(doc, "elapsed_time", elapsed_time);
+    set_opt_str(doc, "error", error);
+    set_opt_str(doc, "objuuid", objuuid);
+    set_opt_str(doc, "coluuid", coluuid);
+    std::string out;
+    serializeJson(doc, out);
+    return out;
+}
+
+SyncProcess SyncProcess::from_json(const std::string& json)
+{
+    SyncProcess f;
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    f.command = doc["command"] | std::string{};
+    f.timeout = doc["timeout"] | int64_t{15};
+    f.stdout_output = get_opt_str(doc["stdout"]);
+    f.stderr_output = get_opt_str(doc["stderr"]);
+    f.status = get_opt_i64(doc["status"]);
+    f.start_time = get_opt_f64(doc["start_time"]);
+    f.elapsed_time = get_opt_f64(doc["elapsed_time"]);
+    f.error = get_opt_str(doc["error"]);
+    f.objuuid = get_opt_str(doc["objuuid"]);
+    f.coluuid = get_opt_str(doc["coluuid"]);
+    return f;
+}
+
+// ── WriteFile ─────────────────────────────────────────────────────────────────
+
+std::string WriteFile::to_json() const
+{
+    JsonDocument doc;
+    doc["type"] = "write_file";
+    doc["b64zlib"] = b64zlib;
+    doc["path"] = path;
+    set_opt_i64(doc, "size", size);
+    set_opt_str(doc, "md5sum", md5sum);
+    set_opt_str(doc, "error", error);
+    set_opt_str(doc, "objuuid", objuuid);
+    set_opt_str(doc, "coluuid", coluuid);
+    std::string out;
+    serializeJson(doc, out);
+    return out;
+}
+
+WriteFile WriteFile::from_json(const std::string& json)
+{
+    WriteFile f;
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    f.b64zlib = doc["b64zlib"] | std::string{};
+    f.path = doc["path"] | std::string{};
+    f.size = get_opt_i64(doc["size"]);
+    f.md5sum = get_opt_str(doc["md5sum"]);
+    f.error = get_opt_str(doc["error"]);
+    f.objuuid = get_opt_str(doc["objuuid"]);
+    f.coluuid = get_opt_str(doc["coluuid"]);
+    return f;
+}
+
+// ── LoadFile ──────────────────────────────────────────────────────────────────
+
+std::string LoadFile::to_json() const
+{
+    JsonDocument doc;
+    doc["type"] = "load_file";
+    doc["path"] = path;
+    set_opt_str(doc, "b64zlib", b64zlib);
+    set_opt_i64(doc, "size", size);
+    set_opt_str(doc, "md5sum", md5sum);
+    set_opt_str(doc, "error", error);
+    set_opt_str(doc, "objuuid", objuuid);
+    set_opt_str(doc, "coluuid", coluuid);
+    std::string out;
+    serializeJson(doc, out);
+    return out;
+}
+
+LoadFile LoadFile::from_json(const std::string& json)
+{
+    LoadFile f;
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    f.path = doc["path"] | std::string{};
+    f.b64zlib = get_opt_str(doc["b64zlib"]);
+    f.size = get_opt_i64(doc["size"]);
+    f.md5sum = get_opt_str(doc["md5sum"]);
+    f.error = get_opt_str(doc["error"]);
+    f.objuuid = get_opt_str(doc["objuuid"]);
+    f.coluuid = get_opt_str(doc["coluuid"]);
+    return f;
+}

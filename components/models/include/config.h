@@ -11,9 +11,14 @@ class Config
     Config();
     ~Config();
 
+    // Persist all current field values back to NVS.
+    void save();
+
     char agtuuid[36];
     uint8_t key[32];
     std::string peerUrl;
+    std::string wifiSSID;
+    std::string wifiPassword;
 
   private:
     KVStore _kvstore;
@@ -21,11 +26,18 @@ class Config
 
 /*
 
-Can you implement a simple TUI that is accessed via serial port? Implement it in main/configure.cpp.
+Can you implement a simple TUI that is accessed via serial port?
+Implement it in main/configure.cpp.
 This is TUI is for configuring the agent after the binary has been flashed onto a chipset.
-The TUI needs to be able to list and show settings in a #sym:Config class instance.
-The TUI also needs to be able to set individual settings in a #sym:Config class instance.
-If there is a managed component from arduino for handling serial i/o, bring it in.
+
+If possible on the ESP32, run the TUI in a separate thread so that it can be accessed at any time
+without blocking the main agent process. If there is a managed component from arduino for handling
+serial i/o, bring it in. If there is a managed component for handling wifi, bring it in and
+integrate it into the TUI for managing wifi credentials.
+
+The TUI needs to be able to do the following workflows:
+list and show settings in a #sym:Config class instance
+set individual settings in a #sym:Config class instance
 
 Stub out commands using the following control forms:
 

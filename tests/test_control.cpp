@@ -17,17 +17,17 @@
 // ── canonical wire JSON from stembot-rust/src/models/control.rs ──────────────
 
 // GetConfig — from Rust GET_CONFIG_REQUEST_JSON / GET_CONFIG_RESPONSE_JSON
-static constexpr const char *GET_CONFIG_REQUEST_JSON =
+static constexpr const char* GET_CONFIG_REQUEST_JSON =
     R"({"type":"get_config","error":null,"objuuid":null,"coluuid":null,"config":null})";
-static constexpr const char *GET_CONFIG_RESPONSE_JSON =
+static constexpr const char* GET_CONFIG_RESPONSE_JSON =
     R"({"type":"get_config","error":null,"objuuid":null,"coluuid":null,"config":{"agtuuid":"a1","port":8080}})";
-static constexpr const char *GET_CONFIG_ERROR_JSON =
+static constexpr const char* GET_CONFIG_ERROR_JSON =
     R"({"type":"get_config","error":"not found","objuuid":"o1","coluuid":"c1","config":null})";
 
 // GetPeers — from Rust GET_PEERS_EMPTY_JSON / GET_PEERS_DATA_JSON
-static constexpr const char *GET_PEERS_EMPTY_JSON =
+static constexpr const char* GET_PEERS_EMPTY_JSON =
     R"({"type":"get_peers","error":null,"objuuid":null,"coluuid":null,"peers":[]})";
-static constexpr const char *GET_PEERS_DATA_JSON =
+static constexpr const char* GET_PEERS_DATA_JSON =
     R"({"type":"get_peers","error":null,"objuuid":null,"coluuid":null,)"
     R"("peers":[{"agtuuid":"a2","polling":false,"destroy_time":2000.0,)"
     R"("refresh_time":1000.0,"url":"http://10.0.0.2:8080","objuuid":null,"coluuid":null}]})";
@@ -36,20 +36,20 @@ static constexpr const char *GET_PEERS_DATA_JSON =
 // constants yet; the wire format is derived from the tagged-enum definition
 // (tag "benchmark", fields: outbound_size, inbound_size, payload, error,
 // objuuid, coluuid — all Option).
-static constexpr const char *BENCHMARK_REQUEST_JSON =
+static constexpr const char* BENCHMARK_REQUEST_JSON =
     R"({"type":"benchmark","outbound_size":1024,"inbound_size":null,"payload":null,"error":null,"objuuid":null,"coluuid":null})";
-static constexpr const char *BENCHMARK_RESPONSE_JSON =
+static constexpr const char* BENCHMARK_RESPONSE_JSON =
     R"({"type":"benchmark","outbound_size":1024,"inbound_size":512,"payload":"aGVsbG8=","error":null,"objuuid":null,"coluuid":null})";
-static constexpr const char *BENCHMARK_ERROR_JSON =
+static constexpr const char* BENCHMARK_ERROR_JSON =
     R"({"type":"benchmark","outbound_size":null,"inbound_size":null,"payload":null,"error":"timeout","objuuid":"o1","coluuid":"c1"})";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 // Parse a JSON string; REQUIRE parse succeeds.
-static JsonDocument parse(const std::string &json)
+static JsonDocument parse(const std::string& json)
 {
     JsonDocument doc;
-    auto         err = deserializeJson(doc, json);
+    auto err = deserializeJson(doc, json);
     REQUIRE(!err);
     return doc;
 }
@@ -60,7 +60,7 @@ static JsonDocument parse(const std::string &json)
 
 TEST_CASE("GetConfig::to_json — request (config null)", "[control][get_config]")
 {
-    GetConfig    f;
+    GetConfig f;
     JsonDocument doc = parse(f.to_json());
 
     REQUIRE(doc["type"] == "get_config");
@@ -88,7 +88,7 @@ TEST_CASE("GetConfig::to_json — response (config present)", "[control][get_con
 TEST_CASE("GetConfig::to_json — error response", "[control][get_config]")
 {
     GetConfig f;
-    f.error   = "not found";
+    f.error = "not found";
     f.objuuid = "o1";
     f.coluuid = "c1";
 
@@ -142,7 +142,7 @@ TEST_CASE("GetConfig roundtrip — request", "[control][get_config]")
 {
     // Parse the canonical Rust JSON, re-serialise, and verify the output
     // retains all fields.
-    GetConfig    f   = GetConfig::from_json(GET_CONFIG_REQUEST_JSON);
+    GetConfig f = GetConfig::from_json(GET_CONFIG_REQUEST_JSON);
     JsonDocument doc = parse(f.to_json());
 
     REQUIRE(doc["type"] == "get_config");
@@ -152,7 +152,7 @@ TEST_CASE("GetConfig roundtrip — request", "[control][get_config]")
 
 TEST_CASE("GetConfig roundtrip — response", "[control][get_config]")
 {
-    GetConfig    f   = GetConfig::from_json(GET_CONFIG_RESPONSE_JSON);
+    GetConfig f = GetConfig::from_json(GET_CONFIG_RESPONSE_JSON);
     JsonDocument doc = parse(f.to_json());
 
     REQUIRE(doc["type"] == "get_config");
@@ -166,7 +166,7 @@ TEST_CASE("GetConfig roundtrip — response", "[control][get_config]")
 
 TEST_CASE("Benchmark::to_json — request (sizes null)", "[control][benchmark]")
 {
-    Benchmark    f;
+    Benchmark f;
     JsonDocument doc = parse(f.to_json());
 
     REQUIRE(doc["type"] == "benchmark");
@@ -195,8 +195,8 @@ TEST_CASE("Benchmark::to_json — response (sizes and payload set)", "[control][
 {
     Benchmark f;
     f.outbound_size = 1024;
-    f.inbound_size  = 512;
-    f.payload       = "aGVsbG8=";
+    f.inbound_size = 512;
+    f.payload = "aGVsbG8=";
 
     JsonDocument doc = parse(f.to_json());
 
@@ -210,7 +210,7 @@ TEST_CASE("Benchmark::to_json — response (sizes and payload set)", "[control][
 TEST_CASE("Benchmark::to_json — error response", "[control][benchmark]")
 {
     Benchmark f;
-    f.error   = "timeout";
+    f.error = "timeout";
     f.objuuid = "o1";
     f.coluuid = "c1";
 
@@ -265,7 +265,7 @@ TEST_CASE("Benchmark::from_json — error response", "[control][benchmark]")
 
 TEST_CASE("Benchmark roundtrip — request", "[control][benchmark]")
 {
-    Benchmark    f   = Benchmark::from_json(BENCHMARK_REQUEST_JSON);
+    Benchmark f = Benchmark::from_json(BENCHMARK_REQUEST_JSON);
     JsonDocument doc = parse(f.to_json());
 
     REQUIRE(doc["type"] == "benchmark");
@@ -276,7 +276,7 @@ TEST_CASE("Benchmark roundtrip — request", "[control][benchmark]")
 
 TEST_CASE("Benchmark roundtrip — response", "[control][benchmark]")
 {
-    Benchmark    f   = Benchmark::from_json(BENCHMARK_RESPONSE_JSON);
+    Benchmark f = Benchmark::from_json(BENCHMARK_RESPONSE_JSON);
     JsonDocument doc = parse(f.to_json());
 
     REQUIRE(doc["type"] == "benchmark");
@@ -291,7 +291,7 @@ TEST_CASE("Benchmark roundtrip — response", "[control][benchmark]")
 
 TEST_CASE("GetPeers::to_json — empty peers", "[control][get_peers]")
 {
-    GetPeers     f;
+    GetPeers f;
     JsonDocument doc = parse(f.to_json());
 
     REQUIRE(doc["type"] == "get_peers");
@@ -304,11 +304,11 @@ TEST_CASE("GetPeers::to_json — empty peers", "[control][get_peers]")
 TEST_CASE("GetPeers::to_json — single peer (from Rust GET_PEERS_DATA_JSON)", "[control][get_peers]")
 {
     Peer p;
-    p.agtuuid      = "a2";
-    p.polling      = false;
+    p.agtuuid = "a2";
+    p.polling = false;
     p.destroy_time = 2000.0;
     p.refresh_time = 1000.0;
-    p.url          = "http://10.0.0.2:8080";
+    p.url = "http://10.0.0.2:8080";
 
     GetPeers f;
     f.peers.push_back(p);
@@ -331,7 +331,7 @@ TEST_CASE("GetPeers::to_json — single peer (from Rust GET_PEERS_DATA_JSON)", "
 TEST_CASE("GetPeers::to_json — error response", "[control][get_peers]")
 {
     GetPeers f;
-    f.error   = "unavailable";
+    f.error = "unavailable";
     f.objuuid = "o1";
     f.coluuid = "c1";
 
@@ -354,14 +354,15 @@ TEST_CASE("GetPeers::from_json — empty (from Rust GET_PEERS_EMPTY_JSON)", "[co
     REQUIRE(!f.coluuid.has_value());
 }
 
-TEST_CASE("GetPeers::from_json — single peer (from Rust GET_PEERS_DATA_JSON)", "[control][get_peers]")
+TEST_CASE("GetPeers::from_json — single peer (from Rust GET_PEERS_DATA_JSON)",
+          "[control][get_peers]")
 {
     GetPeers f = GetPeers::from_json(GET_PEERS_DATA_JSON);
 
     REQUIRE(f.peers.size() == 1);
     REQUIRE(!f.error.has_value());
 
-    const Peer &p = f.peers[0];
+    const Peer& p = f.peers[0];
     REQUIRE(p.agtuuid.has_value());
     REQUIRE(*p.agtuuid == "a2");
     REQUIRE(p.polling == false);
@@ -377,7 +378,7 @@ TEST_CASE("GetPeers::from_json — single peer (from Rust GET_PEERS_DATA_JSON)",
 
 TEST_CASE("GetPeers roundtrip — empty (from Rust GET_PEERS_EMPTY_JSON)", "[control][get_peers]")
 {
-    GetPeers     f   = GetPeers::from_json(GET_PEERS_EMPTY_JSON);
+    GetPeers f = GetPeers::from_json(GET_PEERS_EMPTY_JSON);
     JsonDocument doc = parse(f.to_json());
 
     REQUIRE(doc["type"] == "get_peers");
@@ -385,9 +386,10 @@ TEST_CASE("GetPeers roundtrip — empty (from Rust GET_PEERS_EMPTY_JSON)", "[con
     REQUIRE(doc["error"].isNull());
 }
 
-TEST_CASE("GetPeers roundtrip — single peer (from Rust GET_PEERS_DATA_JSON)", "[control][get_peers]")
+TEST_CASE("GetPeers roundtrip — single peer (from Rust GET_PEERS_DATA_JSON)",
+          "[control][get_peers]")
 {
-    GetPeers     f   = GetPeers::from_json(GET_PEERS_DATA_JSON);
+    GetPeers f = GetPeers::from_json(GET_PEERS_DATA_JSON);
     JsonDocument doc = parse(f.to_json());
 
     REQUIRE(doc["type"] == "get_peers");
