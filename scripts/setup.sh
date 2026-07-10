@@ -91,21 +91,34 @@ handle_brew() {
 }
 
 handle_conan() {
-    if command -v conan &>/dev/null; then
+    # Detect a broken pipx symlink — this happens when VS Code (snap) updates to
+    # a new revision and deletes the old venv that ~/.local/bin/conan pointed to.
+    local conan_link="$HOME/.local/bin/conan"
+    local _broken_symlink=0
+    if [[ -L "$conan_link" && ! -e "$conan_link" ]]; then
+        printf "  [WARN]    %-14s — broken symlink at %s (VS Code snap update?); will reinstall\n" "conan" "$conan_link"
+        _broken_symlink=1
+    fi
+
+    if [[ "$_broken_symlink" -eq 0 ]] && command -v conan &>/dev/null; then
         printf "  [OK]      %-14s %s\n" "conan" "$(command -v conan)"
         if [[ "$UPDATE_MODE" -eq 1 ]]; then
             printf "    Upgrading conan...\n"
             pipx upgrade conan
         fi
     else
-        printf "  [MISSING] %-14s — pipx install conan\n" "conan"
-        if [[ "$INSTALL_MODE" -eq 1 || "$UPDATE_MODE" -eq 1 ]]; then
+        if [[ "$_broken_symlink" -eq 0 ]]; then
+            printf "  [MISSING] %-14s — pipx install conan\n" "conan"
+        fi
+        if [[ "$INSTALL_MODE" -eq 1 || "$UPDATE_MODE" -eq 1 || "$_broken_symlink" -eq 1 ]]; then
             printf "    Installing conan...\n"
             # Ensure pipx is available first
             if ! command -v pipx &>/dev/null; then
                 _pkg_install pipx pipx
             fi
-            pipx install conan
+            # Use --force so pipx regenerates the venv and symlink even if a
+            # stale venv entry already exists (e.g., after a snap revision bump).
+            pipx install --force conan
             # Make sure pipx-managed bins are on PATH for the rest of this session
             export PATH="$HOME/.local/bin:$PATH"
         else
@@ -327,9 +340,16 @@ if [[ "$INSTALL_MODE" -eq 1 || "$UPDATE_MODE" -eq 1 ]]; then
     handle_brew  # ensure brew exists on macOS before updating index
     _pkg_update_index
 
-    echo ""
-    echo "=== Updating pip certificates ==="
-    python3 -m pip install --upgrade pip-system-certs certifi
+    # On macOS the bundled Python ships without the system trust store, so
+    # pip-system-certs / certifi must be kept up-to-date to reach HTTPS hosts.
+    # On Linux the OS certificate store is managed by the distro (e.g. via
+    # ca-certificates) and pip cannot install packages system-wide without
+    # --break-system-packages (PEP 668), so skip this step entirely.
+    if [[ "$_OS" == "macos" ]]; then
+        echo ""
+        echo "=== Updating pip certificates ==="
+        python3 -m pip install --upgrade pip-system-certs certifi
+    fi
 fi
 
 echo ""
