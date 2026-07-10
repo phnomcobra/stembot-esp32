@@ -32,6 +32,8 @@ Config::Config()
     {
         memcpy(key, stored_key.data(), std::min(stored_key.size(), sizeof(key)));
     }
+    
+    Config::peerUrl = Config::_kvstore.getString("peer_url", "");
 }
 
 Config::~Config()
