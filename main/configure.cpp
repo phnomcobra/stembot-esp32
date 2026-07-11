@@ -108,7 +108,7 @@ static int cmd_list(int /*argc*/, char** /*argv*/)
     {
         snprintf(key_hex + i * 2, 3, "%02x", static_cast<unsigned>(g_config.key[i]));
     }
-    printf("  %-16s %s\r\n", "agtuuid:", g_config.agtuuid);
+    printf("  %-16s %.*s\r\n", "agtuuid:", 36, g_config.agtuuid);
     printf("  %-16s %s\r\n", "key:", key_hex);
     printf("  %-16s %s\r\n", "peerUrl:", g_config.peerUrl.c_str());
     printf("  %-16s %s\r\n", "wifiSSID:", g_config.wifiSSID.c_str());
@@ -153,10 +153,14 @@ static int cmd_set(int argc, char** argv)
     {
         g_config.wifiPassword = value;
     }
+    else if (strcmp(field, "passphrase") == 0)
+    {
+        g_config.set_passphrase(value);
+    }
     else
     {
         printf("Unknown field '%s'.\r\n"
-               "Valid fields: agtuuid, peerUrl, wifiSSID, wifiPassword\r\n",
+               "Valid fields: agtuuid, peerUrl, wifiSSID, wifiPassword, passphrase\r\n",
                field);
         return 1;
     }
@@ -270,7 +274,7 @@ static void register_commands()
 
     // set
     s_set_args.field =
-        arg_str1(nullptr, nullptr, "<field>", "agtuuid | peerUrl | wifiSSID | wifiPassword");
+        arg_str1(nullptr, nullptr, "<field>", "agtuuid | peerUrl | wifiSSID | wifiPassword | passphrase");
     s_set_args.value = arg_str1(nullptr, nullptr, "<value>", "New value");
     s_set_args.end = arg_end(2);
     esp_console_cmd_t set_cmd =

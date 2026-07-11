@@ -13,9 +13,10 @@ class Config
 
     // Persist all current field values back to NVS.
     void save();
+    void set_passphrase(const std::string& passphrase);
 
-    char agtuuid[36];
-    uint8_t key[32];
+    char        agtuuid[36];
+    uint8_t     key[32];
     std::string peerUrl;
     std::string wifiSSID;
     std::string wifiPassword;
