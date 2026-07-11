@@ -9,6 +9,7 @@ class StembotTestsConan(ConanFile):
 
     def requirements(self):
         self.requires("catch2/3.7.0")
+        self.requires("mbedtls/3.6.0")
 
     def generate(self):
         tc = CMakeToolchain(self)

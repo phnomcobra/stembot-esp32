@@ -14,8 +14,9 @@ if(ENABLE_CLANG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
 endif()
 
-# Conan provides Catch2 via the toolchain file injected by CMakePresets.json
+# Conan provides Catch2 and MbedTLS via the toolchain file injected by CMakePresets.json
 find_package(Catch2 REQUIRED)
+find_package(MbedTLS REQUIRED)
 
 # ArduinoJson — header-only; reuse the copy already fetched by the ESP-IDF
 # Component Manager so the native tests stay in sync with the firmware build.
@@ -64,6 +65,19 @@ target_link_libraries(test_control
         models
 )
 
+# Compile the agent crypto helpers (AES-256-EAX + set_isrc_json) as a static
+# library for the host.  Only aes_eax.cpp is compiled here — agent.cpp depends
+# on esp_http_client which is ESP-IDF-only.
+add_library(agent_crypto STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/executor/agent/aes_eax.cpp
+)
+target_include_directories(agent_crypto PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/executor/agent/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/include
+    ${ARDUINOJSON_INCLUDE}
+)
+target_link_libraries(agent_crypto PUBLIC MbedTLS::mbedtls models)
+
 # Test executable — network message serialisation / deserialisation
 add_executable(test_network
     test_network.cpp
@@ -74,9 +88,21 @@ target_link_libraries(test_network
         models
 )
 
+# Test executable — AgentClient helpers (crypto + set_isrc + canonical JSON)
+add_executable(test_agent
+    test_agent.cpp
+)
+target_link_libraries(test_agent
+    PRIVATE
+        Catch2::Catch2WithMain
+        agent_crypto
+        models
+)
+
 # Wire Catch2 test discovery into CTest
 include(CTest)
 include(Catch)
 catch_discover_tests(test_helloworld)
 catch_discover_tests(test_control)
 catch_discover_tests(test_network)
+catch_discover_tests(test_agent)
