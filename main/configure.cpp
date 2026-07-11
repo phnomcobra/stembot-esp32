@@ -10,8 +10,8 @@
 // cover all required functionality for an IDF-based project.
 
 #include "argtable3/argtable3.h"
-#include "config.h"
-#include "control.h"
+#include "config.hpp"
+#include "control.hpp"
 #include "esp_console.h"
 #include "esp_err.h"
 #include "esp_event.h"
@@ -273,8 +273,8 @@ static void register_commands()
     ESP_ERROR_CHECK(esp_console_cmd_register(&list_cmd));
 
     // set
-    s_set_args.field =
-        arg_str1(nullptr, nullptr, "<field>", "agtuuid | peerUrl | wifiSSID | wifiPassword | passphrase");
+    s_set_args.field = arg_str1(nullptr, nullptr, "<field>",
+                                "agtuuid | peerUrl | wifiSSID | wifiPassword | passphrase");
     s_set_args.value = arg_str1(nullptr, nullptr, "<value>", "New value");
     s_set_args.end = arg_end(2);
     esp_console_cmd_t set_cmd =

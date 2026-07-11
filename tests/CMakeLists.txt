@@ -33,9 +33,10 @@ target_include_directories(helloworld PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../components/helloworld/include
 )
 
-# Compile the models component (control + utils) as a plain static library
+# Compile the models component (control + network + utils) as a plain static library
 add_library(models STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/control.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/network.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/utils.cpp
 )
 target_include_directories(models PUBLIC
@@ -63,8 +64,19 @@ target_link_libraries(test_control
         models
 )
 
+# Test executable — network message serialisation / deserialisation
+add_executable(test_network
+    test_network.cpp
+)
+target_link_libraries(test_network
+    PRIVATE
+        Catch2::Catch2WithMain
+        models
+)
+
 # Wire Catch2 test discovery into CTest
 include(CTest)
 include(Catch)
 catch_discover_tests(test_helloworld)
 catch_discover_tests(test_control)
+catch_discover_tests(test_network)

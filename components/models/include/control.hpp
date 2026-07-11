@@ -204,3 +204,29 @@ struct LoadFile
     std::string to_json() const;
     static LoadFile from_json(const std::string& json);
 };
+
+// ── ControlFormType ───────────────────────────────────────────────────────────
+// Discriminant for the ControlForm tagged union.
+// Mirrors the ControlForm enum variants in stembot-rust/src/models/control.rs.
+
+enum class ControlFormType
+{
+    CreatePeer,
+    DiscoverPeer,
+    DeletePeers,
+    GetPeers,
+    GetRoutes,
+    SyncProcess,
+    WriteFile,
+    LoadFile,
+    Benchmark,
+    GetConfig,
+    CheckTicket,
+    CloseTicket,
+    Unknown
+};
+
+// Read the "type" field of a raw JSON string and return the corresponding
+// ControlFormType.  Returns Unknown if the type tag is absent or
+// unrecognised.  Does not fully deserialise the form.
+ControlFormType control_form_type(const std::string& json);

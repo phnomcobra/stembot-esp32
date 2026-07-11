@@ -8,7 +8,7 @@
 // inspects individual fields, matching the order-insensitive strategy used
 // by the Rust assert_ser_eq / assert_deser_roundtrip helpers.
 
-#include "control.h"
+#include "control.hpp"
 
 #include <ArduinoJson.h>
 #include <catch2/catch_approx.hpp>

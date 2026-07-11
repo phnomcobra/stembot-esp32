@@ -1,6 +1,6 @@
-#include "control.h"
+#include "control.hpp"
 
-#include "utils.h"
+#include "utils.hpp"
 
 #include <ArduinoJson.h>
 
@@ -74,7 +74,39 @@ GetConfig GetConfig::from_json(const std::string& json)
     f.coluuid = get_opt_str(doc["coluuid"]);
     return f;
 }
+// ── control_form_type ─────────────────────────────────────────────────────────
 
+ControlFormType control_form_type(const std::string& json)
+{
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    const char* type = doc["type"] | "";
+    if (strcmp(type, "create_peer") == 0)
+        return ControlFormType::CreatePeer;
+    if (strcmp(type, "discover_peer") == 0)
+        return ControlFormType::DiscoverPeer;
+    if (strcmp(type, "delete_peers") == 0)
+        return ControlFormType::DeletePeers;
+    if (strcmp(type, "get_peers") == 0)
+        return ControlFormType::GetPeers;
+    if (strcmp(type, "get_routes") == 0)
+        return ControlFormType::GetRoutes;
+    if (strcmp(type, "sync_process") == 0)
+        return ControlFormType::SyncProcess;
+    if (strcmp(type, "write_file") == 0)
+        return ControlFormType::WriteFile;
+    if (strcmp(type, "load_file") == 0)
+        return ControlFormType::LoadFile;
+    if (strcmp(type, "benchmark") == 0)
+        return ControlFormType::Benchmark;
+    if (strcmp(type, "get_config") == 0)
+        return ControlFormType::GetConfig;
+    if (strcmp(type, "check_ticket") == 0)
+        return ControlFormType::CheckTicket;
+    if (strcmp(type, "close_ticket") == 0)
+        return ControlFormType::CloseTicket;
+    return ControlFormType::Unknown;
+}
 // ── Benchmark ─────────────────────────────────────────────────────────────────
 
 std::string Benchmark::to_json() const

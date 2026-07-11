@@ -1,6 +1,6 @@
 #include "esp_log.h"
-#include "helloworld.h"
-#include "kvstore.h"
+#include "helloworld.hpp"
+#include "kvstore.hpp"
 
 static const char* TAG = "stembot";
 
