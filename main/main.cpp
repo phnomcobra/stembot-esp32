@@ -1,17 +1,11 @@
 #include "config.hpp"
 #include "esp_log.h"
-#include "helloworld.hpp"
 #include "network.hpp"
-
-static const char* TAG = "stembot";
 
 extern void event_loop();
 
 extern "C" void app_main(void)
 {
-    const std::string message = helloworld::greet("World");
-    ESP_LOGI(TAG, "%s", message.c_str());
-
     // Load configuration from NVS.
     Config config;
 
