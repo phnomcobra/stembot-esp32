@@ -1,0 +1,10 @@
+# sdkconfig.defaults.qemu
+# Overlay applied on top of sdkconfig.defaults when building for QEMU emulation.
+# DO NOT flash this configuration to real hardware — CONFIG_ETH_USE_OPENETH
+# enables the OpenCores Ethernet driver which only exists inside QEMU.
+#
+# Applied by emulate.sh via:
+#   idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.qemu"
+
+# Enable the OpenCores Ethernet MAC emulated by QEMU via -nic user,model=open_eth
+CONFIG_ETH_USE_OPENETH=y

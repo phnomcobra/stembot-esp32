@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.cpp" "configure.cpp"
+    SRCS "main.cpp" "configure.cpp" "network.cpp"
     INCLUDE_DIRS "."
     REQUIRES helloworld
     REQUIRES kvstore
@@ -9,4 +9,5 @@ idf_component_register(
     REQUIRES esp_wifi
     REQUIRES esp_event
     REQUIRES esp_netif
+    REQUIRES esp_eth
 )

@@ -4,22 +4,21 @@
 // Uses the ESP-IDF console component (linenoise-based REPL) over UART0.
 // The REPL runs in its own FreeRTOS task started by event_loop(), so it
 // never blocks the main agent process.
-//
-// Note: no external Arduino Serial or WiFi managed components are used.
-// The built-in ESP-IDF console (esp_console) and WiFi (esp_wifi) components
-// cover all required functionality for an IDF-based project.
 
+#include "apps/ping/ping_sock.h"
 #include "argtable3/argtable3.h"
 #include "config.hpp"
 #include "control.hpp"
 #include "esp_console.h"
 #include "esp_err.h"
-#include "esp_event.h"
 #include "esp_log.h"
 #include "esp_netif.h"
-#include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
+#include "freertos/semphr.h"
+#include "lwip/inet.h"
+#include "lwip/ip_addr.h"
+#include "lwip/netdb.h"
+#include "network.hpp"
 
 #include <cinttypes>
 #include <cstdio>
@@ -28,76 +27,6 @@
 
 // Global Config instance owned by the TUI.
 static Config g_config;
-
-// ── WiFi ─────────────────────────────────────────────────────────────────────
-
-static bool s_wifi_initialized = false;
-static bool s_event_loop_created = false;
-
-static void on_wifi_event(void* /*arg*/, esp_event_base_t /*base*/, int32_t event_id,
-                          void* /*data*/)
-{
-    if (event_id == WIFI_EVENT_STA_DISCONNECTED)
-    {
-        printf("\r\n[wifi] disconnected\r\n");
-    }
-}
-
-static void on_ip_event(void* /*arg*/, esp_event_base_t /*base*/, int32_t event_id, void* data)
-{
-    if (event_id == IP_EVENT_STA_GOT_IP)
-    {
-        const auto* ev = static_cast<ip_event_got_ip_t*>(data);
-        printf("\r\n[wifi] connected — IP: " IPSTR "\r\n", IP2STR(&ev->ip_info.ip));
-    }
-}
-
-static esp_err_t wifi_sta_connect()
-{
-    if (g_config.wifiSSID.empty())
-    {
-        printf("Error: wifiSSID is not set. Use: set wifiSSID <name>\r\n");
-        return ESP_ERR_INVALID_STATE;
-    }
-
-    if (!s_event_loop_created)
-    {
-        ESP_ERROR_CHECK(esp_event_loop_create_default());
-        s_event_loop_created = true;
-    }
-
-    if (!s_wifi_initialized)
-    {
-        ESP_ERROR_CHECK(esp_netif_init());
-        esp_netif_create_default_wifi_sta();
-
-        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
-                                                            on_wifi_event, nullptr, nullptr));
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
-                                                            on_ip_event, nullptr, nullptr));
-
-        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-        s_wifi_initialized = true;
-    }
-
-    wifi_config_t wifi_cfg = {};
-    strncpy(reinterpret_cast<char*>(wifi_cfg.sta.ssid), g_config.wifiSSID.c_str(),
-            sizeof(wifi_cfg.sta.ssid) - 1);
-    strncpy(reinterpret_cast<char*>(wifi_cfg.sta.password), g_config.wifiPassword.c_str(),
-            sizeof(wifi_cfg.sta.password) - 1);
-
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg));
-    esp_err_t err = esp_wifi_start();
-    if (err == ESP_OK)
-    {
-        esp_wifi_connect();
-        printf("Connecting to '%s'…\r\n", g_config.wifiSSID.c_str());
-    }
-    return err;
-}
 
 // ── cmd: list ─────────────────────────────────────────────────────────────────
 
@@ -173,13 +102,146 @@ static int cmd_set(int argc, char** argv)
 
 static int cmd_wifi_connect(int /*argc*/, char** /*argv*/)
 {
-    esp_err_t err = wifi_sta_connect();
-    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE)
+    if (g_config.wifiSSID.empty())
     {
-        printf("WiFi start failed: %s\r\n", esp_err_to_name(err));
+        printf("Error: wifiSSID is not set. Use: set wifiSSID <name>\r\n");
         return 1;
     }
-    return err == ESP_OK ? 0 : 1;
+    network_wifi_connect(g_config.wifiSSID, g_config.wifiPassword);
+    return 0;
+}
+
+// ── cmd: ping ───────────────────────────────────────────────────────────────
+
+static struct
+{
+    struct arg_str* host;
+    struct arg_int* count;
+    struct arg_end* end;
+} s_ping_args;
+
+static void on_ping_success(esp_ping_handle_t hdl, void* /*args*/)
+{
+    uint8_t ttl;
+    uint16_t seqno;
+    uint32_t elapsed_ms, recv_len;
+    ip_addr_t target = {};
+    esp_ping_get_profile(hdl, ESP_PING_PROF_SEQNO, &seqno, sizeof(seqno));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_TTL, &ttl, sizeof(ttl));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_TIMEGAP, &elapsed_ms, sizeof(elapsed_ms));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_SIZE, &recv_len, sizeof(recv_len));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_IPADDR, &target, sizeof(target));
+    printf("  %" PRIu32 " bytes from %s  seq=%" PRIu16 "  ttl=%" PRIu8 "  time=%" PRIu32 " ms\r\n",
+           recv_len, ipaddr_ntoa(&target), seqno, ttl, elapsed_ms);
+}
+
+static void on_ping_timeout(esp_ping_handle_t hdl, void* /*args*/)
+{
+    uint16_t seqno;
+    esp_ping_get_profile(hdl, ESP_PING_PROF_SEQNO, &seqno, sizeof(seqno));
+    printf("  Request timeout for seq %" PRIu16 "\r\n", seqno);
+}
+
+static void on_ping_end(esp_ping_handle_t hdl, void* args)
+{
+    uint32_t transmitted, received, duration_ms;
+    esp_ping_get_profile(hdl, ESP_PING_PROF_REQUEST, &transmitted, sizeof(transmitted));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_REPLY, &received, sizeof(received));
+    esp_ping_get_profile(hdl, ESP_PING_PROF_DURATION, &duration_ms, sizeof(duration_ms));
+    uint32_t loss = transmitted > 0 ? (transmitted - received) * 100 / transmitted : 0;
+    printf("  --- %" PRIu32 " transmitted, %" PRIu32 " received, %" PRIu32 "%% loss, time %" PRIu32
+           " ms\r\n",
+           transmitted, received, loss, duration_ms);
+    xSemaphoreGive(static_cast<SemaphoreHandle_t>(args));
+}
+
+static int cmd_ping(int argc, char** argv)
+{
+    if (arg_parse(argc, argv, reinterpret_cast<void**>(&s_ping_args)) != 0)
+    {
+        arg_print_errors(stdout, s_ping_args.end, argv[0]);
+        return 1;
+    }
+
+    const char* host = s_ping_args.host->sval[0];
+    const int count = (s_ping_args.count->count > 0) ? s_ping_args.count->ival[0] : 4;
+
+    // Resolve hostname or IP string to an IPv4 address.
+    struct addrinfo hints = {};
+    struct addrinfo* res = nullptr;
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_RAW;
+    if (getaddrinfo(host, nullptr, &hints, &res) != 0 || res == nullptr)
+    {
+        printf("ping: cannot resolve '%s'\r\n", host);
+        return 1;
+    }
+    ip_addr_t target = {};
+    const auto* sa4 = reinterpret_cast<const sockaddr_in*>(res->ai_addr);
+    inet_addr_to_ip4addr(ip_2_ip4(&target), &sa4->sin_addr);
+    IP_SET_TYPE_VAL(target, IPADDR_TYPE_V4);
+    freeaddrinfo(res);
+
+    printf("PING %s (%s): 64 bytes of data\r\n", host, ipaddr_ntoa(&target));
+
+    SemaphoreHandle_t done = xSemaphoreCreateBinary();
+
+    esp_ping_config_t cfg = ESP_PING_DEFAULT_CONFIG();
+    cfg.count = static_cast<uint32_t>(count);
+    cfg.target_addr = target;
+
+    esp_ping_callbacks_t cbs = {};
+    cbs.on_ping_success = on_ping_success;
+    cbs.on_ping_timeout = on_ping_timeout;
+    cbs.on_ping_end = on_ping_end;
+    cbs.cb_args = done;
+
+    esp_ping_handle_t hdl = nullptr;
+    if (esp_ping_new_session(&cfg, &cbs, &hdl) != ESP_OK)
+    {
+        printf("ping: failed to create session\r\n");
+        vSemaphoreDelete(done);
+        return 1;
+    }
+
+    esp_ping_start(hdl);
+    // Block until on_ping_end signals completion.
+    const TickType_t timeout_ticks =
+        pdMS_TO_TICKS((uint32_t)count * (cfg.interval_ms + cfg.timeout_ms) + 2000);
+    xSemaphoreTake(done, timeout_ticks);
+
+    esp_ping_stop(hdl);
+    esp_ping_delete_session(hdl);
+    vSemaphoreDelete(done);
+    return 0;
+}
+
+// ── cmd: net_info ─────────────────────────────────────────────────────────────
+
+static int cmd_net_info(int /*argc*/, char** /*argv*/)
+{
+    esp_netif_t* netif = esp_netif_get_default_netif();
+    if (netif == nullptr)
+    {
+        printf("  No active network interface.\r\n");
+        return 0;
+    }
+
+    esp_netif_ip_info_t ip_info = {};
+    if (esp_netif_get_ip_info(netif, &ip_info) == ESP_OK)
+    {
+        printf("  %-12s " IPSTR "\r\n", "IP:", IP2STR(&ip_info.ip));
+        printf("  %-12s " IPSTR "\r\n", "Netmask:", IP2STR(&ip_info.netmask));
+        printf("  %-12s " IPSTR "\r\n", "Gateway:", IP2STR(&ip_info.gw));
+    }
+
+    esp_netif_dns_info_t dns_info = {};
+    if (esp_netif_get_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns_info) == ESP_OK)
+    {
+        printf("  %-12s " IPSTR "\r\n", "DNS:", IP2STR(&dns_info.ip.u_addr.ip4));
+    }
+
+    return 0;
 }
 
 // ── Control form stubs ────────────────────────────────────────────────────────
@@ -285,6 +347,19 @@ static void register_commands()
     esp_console_cmd_t wifi_cmd =
         make_cmd("wifi_connect", "Connect to Wi-Fi using stored credentials", cmd_wifi_connect);
     ESP_ERROR_CHECK(esp_console_cmd_register(&wifi_cmd));
+
+    // ping
+    s_ping_args.host = arg_str1(nullptr, nullptr, "<host>", "Hostname or IP address to ping");
+    s_ping_args.count = arg_int0("c", "count", "<n>", "Number of packets to send (default: 4)");
+    s_ping_args.end = arg_end(2);
+    esp_console_cmd_t ping_cmd =
+        make_cmd("ping", "Send ICMP echo requests to a host", cmd_ping, &s_ping_args);
+    ESP_ERROR_CHECK(esp_console_cmd_register(&ping_cmd));
+
+    // net_info
+    esp_console_cmd_t net_info_cmd =
+        make_cmd("net_info", "Show IP address, gateway, netmask, and DNS", cmd_net_info);
+    ESP_ERROR_CHECK(esp_console_cmd_register(&net_info_cmd));
 
     // Control form stubs
     static const struct
