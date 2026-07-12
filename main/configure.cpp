@@ -325,7 +325,7 @@ static void register_commands()
 // Initialises the console REPL and returns immediately; the REPL runs in
 // its own FreeRTOS task so it never blocks app_main or the agent loop.
 
-void event_loop()
+void start_console()
 {
     esp_console_repl_t* repl = nullptr;
 

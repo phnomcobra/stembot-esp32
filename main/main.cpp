@@ -2,7 +2,8 @@
 #include "esp_log.h"
 #include "network.hpp"
 
-extern void event_loop();
+extern void start_console();
+extern void start_processor();
 
 extern "C" void app_main(void)
 {
@@ -16,5 +17,9 @@ extern "C" void app_main(void)
 
     // Start the serial configuration TUI in its own FreeRTOS task.
     // Returns immediately; the REPL runs in the background.
-    event_loop();
+    start_console();
+
+    // Start the processor in its own FreeRTOS task.
+    // Returns immediately; the processor runs in the background.
+    start_processor();
 }
