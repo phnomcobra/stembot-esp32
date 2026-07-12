@@ -81,24 +81,6 @@ struct Acknowledgement
     static Acknowledgement from_json(const std::string& json);
 };
 
-// ── Advertisement ─────────────────────────────────────────────────────────────
-// Wire type tag: "advertisement"
-
-struct Advertisement
-{
-    std::string agtuuid;
-    std::vector<Route> routes;
-    std::string src;
-    std::optional<std::string> dest;
-    std::optional<std::string> isrc;
-    std::optional<double> timestamp;
-    std::optional<std::string> objuuid;
-    std::optional<std::string> coluuid;
-
-    std::string to_json() const;
-    static Advertisement from_json(const std::string& json);
-};
-
 // ── NetworkMessagesResponse ───────────────────────────────────────────────────
 // Wire type tag: "messages_response"
 //
@@ -178,7 +160,6 @@ enum class NetworkMessageType
     MessagesRequest,
     MessagesResponse,
     Acknowledgement,
-    Advertisement,
     TicketTraceResponse,
     TicketRequest,
     TicketResponse,

@@ -26,14 +26,6 @@ set(ARDUINOJSON_ROOT
     ${CMAKE_CURRENT_SOURCE_DIR}/../managed_components/bblanchon__arduinojson)
 set(ARDUINOJSON_INCLUDE ${ARDUINOJSON_ROOT} ${ARDUINOJSON_ROOT}/src)
 
-# Compile the helloworld component as a plain static library for the host
-add_library(helloworld STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../components/helloworld/helloworld.cpp
-)
-target_include_directories(helloworld PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../components/helloworld/include
-)
-
 # Compile the models component (control + network + utils) as a plain static library
 add_library(models STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/control.cpp
@@ -43,16 +35,6 @@ add_library(models STATIC
 target_include_directories(models PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/include
     ${ARDUINOJSON_INCLUDE}
-)
-
-# Test executable — helloworld
-add_executable(test_helloworld
-    test_helloworld.cpp
-)
-target_link_libraries(test_helloworld
-    PRIVATE
-        Catch2::Catch2WithMain
-        helloworld
 )
 
 # Test executable — control form serialisation / deserialisation
@@ -102,7 +84,6 @@ target_link_libraries(test_agent
 # Wire Catch2 test discovery into CTest
 include(CTest)
 include(Catch)
-catch_discover_tests(test_helloworld)
 catch_discover_tests(test_control)
 catch_discover_tests(test_network)
 catch_discover_tests(test_agent)

@@ -105,52 +105,6 @@ Acknowledgement Acknowledgement::from_json(const std::string& json)
     return a;
 }
 
-// ── Advertisement ─────────────────────────────────────────────────────────────
-
-std::string Advertisement::to_json() const
-{
-    JsonDocument doc;
-    doc["type"] = "advertisement";
-    set_opt_str(doc, "dest", dest);
-    doc["src"] = src;
-    set_opt_str(doc, "isrc", isrc);
-    set_opt_f64(doc, "timestamp", timestamp);
-    set_opt_str(doc, "objuuid", objuuid);
-    set_opt_str(doc, "coluuid", coluuid);
-    JsonArray arr = doc["routes"].to<JsonArray>();
-    for (const Route& r : routes)
-    {
-        JsonDocument rdoc;
-        deserializeJson(rdoc, r.to_json());
-        arr.add(rdoc.as<JsonObject>());
-    }
-    doc["agtuuid"] = agtuuid;
-    std::string out;
-    serializeJson(doc, out);
-    return out;
-}
-
-Advertisement Advertisement::from_json(const std::string& json)
-{
-    Advertisement a;
-    JsonDocument doc;
-    deserializeJson(doc, json);
-    a.agtuuid = doc["agtuuid"] | std::string{};
-    a.src = doc["src"] | std::string{};
-    a.dest = get_opt_str(doc["dest"]);
-    a.isrc = get_opt_str(doc["isrc"]);
-    a.timestamp = get_opt_f64(doc["timestamp"]);
-    a.objuuid = get_opt_str(doc["objuuid"]);
-    a.coluuid = get_opt_str(doc["coluuid"]);
-    for (JsonVariant rv : doc["routes"].as<JsonArray>())
-    {
-        std::string rj;
-        serializeJson(rv, rj);
-        a.routes.push_back(Route::from_json(rj));
-    }
-    return a;
-}
-
 // ── NetworkMessagesResponse ───────────────────────────────────────────────────
 
 std::string NetworkMessagesResponse::to_json() const
@@ -307,8 +261,6 @@ NetworkMessageType network_message_type(const std::string& json)
         return NetworkMessageType::MessagesResponse;
     if (strcmp(type, "acknowledgement") == 0)
         return NetworkMessageType::Acknowledgement;
-    if (strcmp(type, "advertisement") == 0)
-        return NetworkMessageType::Advertisement;
     if (strcmp(type, "ticket_trace_response") == 0)
         return NetworkMessageType::TicketTraceResponse;
     if (strcmp(type, "ticket_request") == 0)

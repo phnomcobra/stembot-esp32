@@ -248,62 +248,6 @@ static int cmd_net_info(int /*argc*/, char** /*argv*/)
 // Each stub corresponds to a control form variant in control.h / control.rs.
 // Replace the printf body with real dispatch logic when implementing the agent.
 
-static int cmd_create_peer(int /*argc*/, char** /*argv*/)
-{
-    CreatePeer form{};
-    printf("[stub] create_peer — would dispatch: %s\r\n", form.to_json().c_str());
-    return 0;
-}
-
-static int cmd_discover_peer(int /*argc*/, char** /*argv*/)
-{
-    DiscoverPeer form{};
-    printf("[stub] discover_peer — would dispatch: %s\r\n", form.to_json().c_str());
-    return 0;
-}
-
-static int cmd_delete_peers(int /*argc*/, char** /*argv*/)
-{
-    DeletePeers form{};
-    printf("[stub] delete_peers — would dispatch: %s\r\n", form.to_json().c_str());
-    return 0;
-}
-
-static int cmd_get_peers(int /*argc*/, char** /*argv*/)
-{
-    GetPeers form{};
-    printf("[stub] get_peers — would dispatch: %s\r\n", form.to_json().c_str());
-    return 0;
-}
-
-static int cmd_get_routes(int /*argc*/, char** /*argv*/)
-{
-    GetRoutes form{};
-    printf("[stub] get_routes — would dispatch: %s\r\n", form.to_json().c_str());
-    return 0;
-}
-
-static int cmd_sync_process(int /*argc*/, char** /*argv*/)
-{
-    SyncProcess form{};
-    printf("[stub] sync_process — would dispatch: %s\r\n", form.to_json().c_str());
-    return 0;
-}
-
-static int cmd_write_file(int /*argc*/, char** /*argv*/)
-{
-    WriteFile form{};
-    printf("[stub] write_file — would dispatch: %s\r\n", form.to_json().c_str());
-    return 0;
-}
-
-static int cmd_load_file(int /*argc*/, char** /*argv*/)
-{
-    LoadFile form{};
-    printf("[stub] load_file — would dispatch: %s\r\n", form.to_json().c_str());
-    return 0;
-}
-
 static int cmd_get_config(int /*argc*/, char** /*argv*/)
 {
     GetConfig form{};
@@ -368,14 +312,6 @@ static void register_commands()
         const char* help;
         esp_console_cmd_func_t fn;
     } stubs[] = {
-        {"create_peer", "Create a peer connection (stub)", cmd_create_peer},
-        {"discover_peer", "Discover a peer via URL (stub)", cmd_discover_peer},
-        {"delete_peers", "Delete one or more peers (stub)", cmd_delete_peers},
-        {"get_peers", "List known peers (stub)", cmd_get_peers},
-        {"get_routes", "Show routing table (stub)", cmd_get_routes},
-        {"sync_process", "Execute a process on a remote agent (stub)", cmd_sync_process},
-        {"write_file", "Write a file to a remote agent (stub)", cmd_write_file},
-        {"load_file", "Load a file from a remote agent (stub)", cmd_load_file},
         {"get_config", "Fetch agent configuration (stub)", cmd_get_config},
     };
     for (const auto& s : stubs)

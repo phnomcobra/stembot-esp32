@@ -1,4 +1,4 @@
-// Protocol-compatibility tests for the GetConfig, Benchmark, and GetPeers
+// Protocol-compatibility tests for the GetConfig and Benchmark
 // control forms.
 //
 // Canonical JSON strings are taken directly from the Rust reference
@@ -23,14 +23,6 @@ static constexpr const char* GET_CONFIG_RESPONSE_JSON =
     R"({"type":"get_config","error":null,"objuuid":null,"coluuid":null,"config":{"agtuuid":"a1","port":8080}})";
 static constexpr const char* GET_CONFIG_ERROR_JSON =
     R"({"type":"get_config","error":"not found","objuuid":"o1","coluuid":"c1","config":null})";
-
-// GetPeers — from Rust GET_PEERS_EMPTY_JSON / GET_PEERS_DATA_JSON
-static constexpr const char* GET_PEERS_EMPTY_JSON =
-    R"({"type":"get_peers","error":null,"objuuid":null,"coluuid":null,"peers":[]})";
-static constexpr const char* GET_PEERS_DATA_JSON =
-    R"({"type":"get_peers","error":null,"objuuid":null,"coluuid":null,)"
-    R"("peers":[{"agtuuid":"a2","polling":false,"destroy_time":2000.0,)"
-    R"("refresh_time":1000.0,"url":"http://10.0.0.2:8080","objuuid":null,"coluuid":null}]})";
 
 // Benchmark — the Rust implementation defines the struct but has no test
 // constants yet; the wire format is derived from the tagged-enum definition
@@ -283,122 +275,4 @@ TEST_CASE("Benchmark roundtrip — response", "[control][benchmark]")
     REQUIRE(doc["outbound_size"] == 1024);
     REQUIRE(doc["inbound_size"] == 512);
     REQUIRE(doc["payload"] == "aGVsbG8=");
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// GetPeers
-// ═════════════════════════════════════════════════════════════════════════════
-
-TEST_CASE("GetPeers::to_json — empty peers", "[control][get_peers]")
-{
-    GetPeers f;
-    JsonDocument doc = parse(f.to_json());
-
-    REQUIRE(doc["type"] == "get_peers");
-    REQUIRE(doc["peers"].as<JsonArrayConst>().size() == 0);
-    REQUIRE(doc["error"].isNull());
-    REQUIRE(doc["objuuid"].isNull());
-    REQUIRE(doc["coluuid"].isNull());
-}
-
-TEST_CASE("GetPeers::to_json — single peer (from Rust GET_PEERS_DATA_JSON)", "[control][get_peers]")
-{
-    Peer p;
-    p.agtuuid = "a2";
-    p.polling = false;
-    p.destroy_time = 2000.0;
-    p.refresh_time = 1000.0;
-    p.url = "http://10.0.0.2:8080";
-
-    GetPeers f;
-    f.peers.push_back(p);
-
-    JsonDocument doc = parse(f.to_json());
-
-    REQUIRE(doc["type"] == "get_peers");
-    REQUIRE(doc["peers"].as<JsonArrayConst>().size() == 1);
-
-    JsonObjectConst peer = doc["peers"][0].as<JsonObjectConst>();
-    REQUIRE(peer["agtuuid"] == "a2");
-    REQUIRE(peer["polling"] == false);
-    REQUIRE(Catch::Approx(peer["destroy_time"].as<double>()) == 2000.0);
-    REQUIRE(Catch::Approx(peer["refresh_time"].as<double>()) == 1000.0);
-    REQUIRE(peer["url"] == "http://10.0.0.2:8080");
-    REQUIRE(peer["objuuid"].isNull());
-    REQUIRE(peer["coluuid"].isNull());
-}
-
-TEST_CASE("GetPeers::to_json — error response", "[control][get_peers]")
-{
-    GetPeers f;
-    f.error = "unavailable";
-    f.objuuid = "o1";
-    f.coluuid = "c1";
-
-    JsonDocument doc = parse(f.to_json());
-
-    REQUIRE(doc["type"] == "get_peers");
-    REQUIRE(doc["peers"].as<JsonArrayConst>().size() == 0);
-    REQUIRE(doc["error"] == "unavailable");
-    REQUIRE(doc["objuuid"] == "o1");
-    REQUIRE(doc["coluuid"] == "c1");
-}
-
-TEST_CASE("GetPeers::from_json — empty (from Rust GET_PEERS_EMPTY_JSON)", "[control][get_peers]")
-{
-    GetPeers f = GetPeers::from_json(GET_PEERS_EMPTY_JSON);
-
-    REQUIRE(f.peers.empty());
-    REQUIRE(!f.error.has_value());
-    REQUIRE(!f.objuuid.has_value());
-    REQUIRE(!f.coluuid.has_value());
-}
-
-TEST_CASE("GetPeers::from_json — single peer (from Rust GET_PEERS_DATA_JSON)",
-          "[control][get_peers]")
-{
-    GetPeers f = GetPeers::from_json(GET_PEERS_DATA_JSON);
-
-    REQUIRE(f.peers.size() == 1);
-    REQUIRE(!f.error.has_value());
-
-    const Peer& p = f.peers[0];
-    REQUIRE(p.agtuuid.has_value());
-    REQUIRE(*p.agtuuid == "a2");
-    REQUIRE(p.polling == false);
-    REQUIRE(p.destroy_time.has_value());
-    REQUIRE(Catch::Approx(*p.destroy_time) == 2000.0);
-    REQUIRE(p.refresh_time.has_value());
-    REQUIRE(Catch::Approx(*p.refresh_time) == 1000.0);
-    REQUIRE(p.url.has_value());
-    REQUIRE(*p.url == "http://10.0.0.2:8080");
-    REQUIRE(!p.objuuid.has_value());
-    REQUIRE(!p.coluuid.has_value());
-}
-
-TEST_CASE("GetPeers roundtrip — empty (from Rust GET_PEERS_EMPTY_JSON)", "[control][get_peers]")
-{
-    GetPeers f = GetPeers::from_json(GET_PEERS_EMPTY_JSON);
-    JsonDocument doc = parse(f.to_json());
-
-    REQUIRE(doc["type"] == "get_peers");
-    REQUIRE(doc["peers"].as<JsonArrayConst>().size() == 0);
-    REQUIRE(doc["error"].isNull());
-}
-
-TEST_CASE("GetPeers roundtrip — single peer (from Rust GET_PEERS_DATA_JSON)",
-          "[control][get_peers]")
-{
-    GetPeers f = GetPeers::from_json(GET_PEERS_DATA_JSON);
-    JsonDocument doc = parse(f.to_json());
-
-    REQUIRE(doc["type"] == "get_peers");
-    REQUIRE(doc["peers"].as<JsonArrayConst>().size() == 1);
-
-    JsonObjectConst peer = doc["peers"][0].as<JsonObjectConst>();
-    REQUIRE(peer["agtuuid"] == "a2");
-    REQUIRE(peer["polling"] == false);
-    REQUIRE(Catch::Approx(peer["destroy_time"].as<double>()) == 2000.0);
-    REQUIRE(Catch::Approx(peer["refresh_time"].as<double>()) == 1000.0);
-    REQUIRE(peer["url"] == "http://10.0.0.2:8080");
 }

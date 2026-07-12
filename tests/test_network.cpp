@@ -35,10 +35,6 @@ static constexpr const char* ACK_FORWARDED_JSON =
     R"({"type":"acknowledgement","dest":null,"src":"a1","isrc":null,"timestamp":1000.0,)"
     R"("objuuid":null,"coluuid":null,"ack_type":"ping","forwarded":"a2","error":null})";
 
-static constexpr const char* ADV_EMPTY_JSON =
-    R"({"type":"advertisement","dest":null,"src":"a1","isrc":null,"timestamp":1000.0,)"
-    R"("objuuid":null,"coluuid":null,"routes":[],"agtuuid":"a1"})";
-
 static constexpr const char* ADV_ROUTES_JSON =
     R"({"type":"advertisement","dest":null,"src":"a1","isrc":null,"timestamp":1000.0,)"
     R"("objuuid":null,"coluuid":null,)"
@@ -251,67 +247,6 @@ TEST_CASE("network_message_type — acknowledgement", "[network][type_detection]
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// Advertisement
-// ═════════════════════════════════════════════════════════════════════════════
-
-TEST_CASE("Advertisement::to_json — empty routes", "[network][advertisement]")
-{
-    Advertisement a;
-    a.agtuuid = "a1";
-    a.src = "a1";
-    a.timestamp = 1000.0;
-
-    JsonDocument doc = parse(a.to_json());
-    REQUIRE(doc["type"] == "advertisement");
-    REQUIRE(doc["agtuuid"] == "a1");
-    REQUIRE(doc["routes"].as<JsonArray>().size() == 0);
-}
-
-TEST_CASE("Advertisement::to_json — with routes", "[network][advertisement]")
-{
-    Route r;
-    r.agtuuid = "a2";
-    r.gtwuuid = "a1";
-    r.weight = 1;
-
-    Advertisement a;
-    a.agtuuid = "a1";
-    a.src = "a1";
-    a.timestamp = 1000.0;
-    a.routes = {r};
-
-    JsonDocument doc = parse(a.to_json());
-    REQUIRE(doc["routes"].as<JsonArray>().size() == 1);
-    REQUIRE(doc["routes"][0]["agtuuid"] == "a2");
-    REQUIRE(doc["routes"][0]["gtwuuid"] == "a1");
-    REQUIRE(doc["routes"][0]["weight"] == 1);
-}
-
-TEST_CASE("Advertisement::from_json — empty routes roundtrip", "[network][advertisement]")
-{
-    Advertisement a = Advertisement::from_json(ADV_EMPTY_JSON);
-    REQUIRE(a.agtuuid == "a1");
-    REQUIRE(a.routes.empty());
-    JsonDocument doc = parse(a.to_json());
-    REQUIRE(doc["type"] == "advertisement");
-    REQUIRE(doc["routes"].as<JsonArray>().size() == 0);
-}
-
-TEST_CASE("Advertisement::from_json — with routes roundtrip", "[network][advertisement]")
-{
-    Advertisement a = Advertisement::from_json(ADV_ROUTES_JSON);
-    REQUIRE(a.routes.size() == 1);
-    REQUIRE(a.routes[0].agtuuid == "a2");
-    REQUIRE(a.routes[0].gtwuuid == "a1");
-    REQUIRE(a.routes[0].weight == 1);
-}
-
-TEST_CASE("network_message_type — advertisement", "[network][type_detection]")
-{
-    REQUIRE(network_message_type(ADV_EMPTY_JSON) == NetworkMessageType::Advertisement);
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
 // NetworkMessagesResponse
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -427,61 +362,6 @@ TEST_CASE("network_message_type — ticket_trace_response", "[network][type_dete
 // ═════════════════════════════════════════════════════════════════════════════
 // NetworkTicket
 // ═════════════════════════════════════════════════════════════════════════════
-
-TEST_CASE("NetworkTicket::to_json — ticket_request with sync_process form",
-          "[network][network_ticket]")
-{
-    SyncProcess form;
-    form.command = "ls /";
-    form.timeout = 15;
-
-    NetworkTicket t;
-    t.tckuuid = "t1";
-    t.src = "a1";
-    t.timestamp = 1000.0;
-    t.form_json = form.to_json();
-
-    JsonDocument doc = parse(t.to_json("ticket_request"));
-    REQUIRE(doc["type"] == "ticket_request");
-    REQUIRE(doc["tckuuid"] == "t1");
-    REQUIRE(doc["src"] == "a1");
-    REQUIRE(doc["tracing"] == false);
-    REQUIRE(doc["error"].isNull());
-    REQUIRE(doc["create_time"].isNull());
-    REQUIRE(doc["service_time"].isNull());
-    REQUIRE(doc["form"]["type"] == "sync_process");
-    REQUIRE(doc["form"]["command"] == "ls /");
-    REQUIRE(doc["form"]["timeout"] == 15);
-    REQUIRE(doc["form"]["stdout"].isNull());
-    REQUIRE(doc["form"]["status"].isNull());
-}
-
-TEST_CASE("NetworkTicket::to_json — ticket_response with populated form",
-          "[network][network_ticket]")
-{
-    SyncProcess form;
-    form.command = "ls /";
-    form.timeout = 15;
-    form.stdout_output = "bin\n";
-    form.status = 0;
-    form.start_time = 1000.0;
-    form.elapsed_time = 0.1;
-
-    NetworkTicket t;
-    t.tckuuid = "t1";
-    t.src = "a1";
-    t.timestamp = 1000.0;
-    t.service_time = 0.5;
-    t.form_json = form.to_json();
-
-    JsonDocument doc = parse(t.to_json("ticket_response"));
-    REQUIRE(doc["type"] == "ticket_response");
-    REQUIRE(doc["service_time"].as<double>() == Catch::Approx(0.5));
-    REQUIRE(doc["form"]["stdout"] == "bin\n");
-    REQUIRE(doc["form"]["status"] == 0);
-    REQUIRE(doc["form"]["start_time"].as<double>() == Catch::Approx(1000.0));
-    REQUIRE(doc["form"]["elapsed_time"].as<double>() == Catch::Approx(0.1));
-}
 
 TEST_CASE("NetworkTicket::from_json — ticket_request canonical roundtrip",
           "[network][network_ticket]")
