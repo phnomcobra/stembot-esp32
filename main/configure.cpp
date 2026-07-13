@@ -12,6 +12,7 @@
 #include "esp_console.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "esp_netif.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -93,7 +94,6 @@ static int cmd_set(int argc, char** argv)
                field);
         return 1;
     }
-    g_config.save();
     printf("OK\r\n");
     return 0;
 }
@@ -108,6 +108,26 @@ static int cmd_wifi_connect(int /*argc*/, char** /*argv*/)
         return 1;
     }
     network_wifi_connect(g_config.wifiSSID, g_config.wifiPassword);
+    return 0;
+}
+
+// ── cmd: save ─────────────────────────────────────────────────────────────────
+
+static int cmd_save(int /*argc*/, char** /*argv*/)
+{
+    g_config.save();
+    printf("OK\r\n");
+    return 0;
+}
+
+// ── cmd: reboot ───────────────────────────────────────────────────────────────
+
+static int cmd_reboot(int /*argc*/, char** /*argv*/)
+{
+    printf("Rebooting...\r\n");
+    fflush(stdout);
+    vTaskDelay(pdMS_TO_TICKS(5000)); // Allow UART TX FIFO to drain before reset.
+    esp_restart();
     return 0;
 }
 
@@ -291,6 +311,15 @@ static void register_commands()
     esp_console_cmd_t wifi_cmd =
         make_cmd("wifi_connect", "Connect to Wi-Fi using stored credentials", cmd_wifi_connect);
     ESP_ERROR_CHECK(esp_console_cmd_register(&wifi_cmd));
+
+    // save
+    esp_console_cmd_t save_cmd =
+        make_cmd("save", "Persist current configuration to NVS", cmd_save);
+    ESP_ERROR_CHECK(esp_console_cmd_register(&save_cmd));
+
+    // reboot
+    esp_console_cmd_t reboot_cmd = make_cmd("reboot", "Reboot the device", cmd_reboot);
+    ESP_ERROR_CHECK(esp_console_cmd_register(&reboot_cmd));
 
     // ping
     s_ping_args.host = arg_str1(nullptr, nullptr, "<host>", "Hostname or IP address to ping");
