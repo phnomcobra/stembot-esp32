@@ -45,6 +45,8 @@ Config::Config()
     Config::peerUrl = Config::_kvstore.getString("peer_url", "");
     Config::wifiSSID = Config::_kvstore.getString("wifi_ssid", "");
     Config::wifiPassword = Config::_kvstore.getString("wifi_password", "");
+    Config::debug = Config::_kvstore.getBool("debug", false);
+    Config::polling = Config::_kvstore.getBool("polling", false);
 }
 
 Config::~Config()
@@ -59,4 +61,6 @@ void Config::save()
     Config::_kvstore.putString("peer_url", peerUrl);
     Config::_kvstore.putString("wifi_ssid", wifiSSID);
     Config::_kvstore.putString("wifi_password", wifiPassword);
+    Config::_kvstore.putBool("debug", debug);
+    Config::_kvstore.putBool("polling", polling);
 }

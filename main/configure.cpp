@@ -44,6 +44,8 @@ static int cmd_list(int /*argc*/, char** /*argv*/)
     printf("  %-16s %s\r\n", "wifiSSID:", g_config.wifiSSID.c_str());
     printf("  %-16s %s\r\n",
            "wifiPassword:", g_config.wifiPassword.empty() ? "(not set)" : "(hidden)");
+    printf("  %-16s %s\r\n", "polling:", g_config.polling ? "true" : "false");
+    printf("  %-16s %s\r\n", "debug:", g_config.debug ? "true" : "false");
     return 0;
 }
 
@@ -87,10 +89,34 @@ static int cmd_set(int argc, char** argv)
     {
         g_config.set_passphrase(value);
     }
+    else if (strcmp(field, "polling") == 0)
+    {
+        if (strcmp(value, "true") == 0)
+            g_config.polling = true;
+        else if (strcmp(value, "false") == 0)
+            g_config.polling = false;
+        else
+        {
+            printf("Invalid value for 'polling'. Use 'true' or 'false'.\r\n");
+            return 1;
+        }
+    }
+    else if (strcmp(field, "debug") == 0)
+    {
+        if (strcmp(value, "true") == 0)
+            g_config.debug = true;
+        else if (strcmp(value, "false") == 0)
+            g_config.debug = false;
+        else
+        {
+            printf("Invalid value for 'debug'. Use 'true' or 'false'.\r\n");
+            return 1;
+        }
+    }
     else
     {
         printf("Unknown field '%s'.\r\n"
-               "Valid fields: agtuuid, peerUrl, wifiSSID, wifiPassword, passphrase\r\n",
+               "Valid fields: agtuuid, peerUrl, wifiSSID, wifiPassword, passphrase, polling, debug\r\n",
                field);
         return 1;
     }
@@ -300,7 +326,7 @@ static void register_commands()
 
     // set
     s_set_args.field = arg_str1(nullptr, nullptr, "<field>",
-                                "agtuuid | peerUrl | wifiSSID | wifiPassword | passphrase");
+                                "agtuuid | peerUrl | wifiSSID | wifiPassword | passphrase | polling | debug");
     s_set_args.value = arg_str1(nullptr, nullptr, "<value>", "New value");
     s_set_args.end = arg_end(2);
     esp_console_cmd_t set_cmd =
@@ -333,20 +359,10 @@ static void register_commands()
         make_cmd("net_info", "Show IP address, gateway, netmask, and DNS", cmd_net_info);
     ESP_ERROR_CHECK(esp_console_cmd_register(&net_info_cmd));
 
-    // Control form stubs
-    static const struct
-    {
-        const char* name;
-        const char* help;
-        esp_console_cmd_func_t fn;
-    } stubs[] = {
-        {"get_config", "Fetch agent configuration (stub)", cmd_get_config},
-    };
-    for (const auto& s : stubs)
-    {
-        esp_console_cmd_t cmd = make_cmd(s.name, s.help, s.fn);
-        ESP_ERROR_CHECK(esp_console_cmd_register(&cmd));
-    }
+    // get_config
+    esp_console_cmd_t get_config_cmd =
+        make_cmd("get_config", "Fetch agent configuration (stub)", cmd_get_config);
+    ESP_ERROR_CHECK(esp_console_cmd_register(&get_config_cmd));
 }
 
 // ── Public entry point ────────────────────────────────────────────────────────

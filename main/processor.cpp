@@ -19,6 +19,12 @@ void processor_task(void* p)
         // Task code goes here
         Config config;
 
+        if (!config.polling)
+        {
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            continue;
+        }
+
         network_message::NetworkMessagesRequest messages_request;
         messages_request.src = config.agtuuid;
         messages_request.timestamp = static_cast<double>(esp_timer_get_time()) / 1e6;
@@ -29,14 +35,20 @@ void processor_task(void* p)
         std::string messages_response_json = agent_client.send_network_message(messages_request.to_json());
         if (messages_response_json.empty())
         {
-            ESP_LOGE("Processor", "Failed to receive response");
-            vTaskDelay(10000 / portTICK_PERIOD_MS);
+            if (config.debug)
+            {
+                ESP_LOGE("Processor", "Failed to receive response");
+            }
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
             continue;
         }
 
         auto messages_response = network_message::NetworkMessagesResponse::from_json(messages_response_json);
 
-        ESP_LOGI("Processor", "Received %zu messages", messages_response.message_jsons.size());
+        if (config.debug)
+        {
+            ESP_LOGI("Processor", "Received %zu messages", messages_response.message_jsons.size());
+        }
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }

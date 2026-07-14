@@ -16,6 +16,8 @@ class Config
 
     char agtuuid[36];
     uint8_t key[32];
+    bool debug;
+    bool polling;
     std::string peerUrl;
     std::string wifiSSID;
     std::string wifiPassword;
