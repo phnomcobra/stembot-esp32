@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 
+namespace control_form
+{
+
 // Control forms — port of stembot-rust/src/models/control.rs (GetConfig,
 // Benchmark, GetPeers only).  Serialization uses ArduinoJson.
 //
@@ -57,3 +60,5 @@ enum class ControlFormType
 // ControlFormType.  Returns Unknown if the type tag is absent or
 // unrecognised.  Does not fully deserialise the form.
 ControlFormType control_form_type(const std::string& json);
+
+} // namespace control_form

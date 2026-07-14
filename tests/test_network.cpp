@@ -13,6 +13,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+using namespace network_message;
+
 // ── canonical wire JSON from stembot-rust/src/models/network.rs ──────────────
 
 static constexpr const char* PING_JSON =

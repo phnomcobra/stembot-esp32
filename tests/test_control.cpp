@@ -14,6 +14,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+using namespace control_form;
+
 // ── canonical wire JSON from stembot-rust/src/models/control.rs ──────────────
 
 // GetConfig — from Rust GET_CONFIG_REQUEST_JSON / GET_CONFIG_RESPONSE_JSON

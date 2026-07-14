@@ -4,6 +4,9 @@
 
 #include <ArduinoJson.h>
 
+namespace network_message
+{
+
 // ── Ping ──────────────────────────────────────────────────────────────────────
 
 std::string Ping::to_json() const
@@ -269,3 +272,5 @@ NetworkMessageType network_message_type(const std::string& json)
         return NetworkMessageType::TicketResponse;
     return NetworkMessageType::Unknown;
 }
+
+} // namespace network_message

@@ -12,14 +12,14 @@
 #include "esp_console.h"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "esp_system.h"
 #include "esp_netif.h"
+#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "lwip/inet.h"
 #include "lwip/ip_addr.h"
 #include "lwip/netdb.h"
-#include "network.hpp"
+#include "ethernet.hpp"
 
 #include <cinttypes>
 #include <cstdio>
@@ -270,7 +270,7 @@ static int cmd_net_info(int /*argc*/, char** /*argv*/)
 
 static int cmd_get_config(int /*argc*/, char** /*argv*/)
 {
-    GetConfig form{};
+    control_form::GetConfig form{};
     printf("[stub] get_config — would dispatch: %s\r\n", form.to_json().c_str());
     return 0;
 }
@@ -313,8 +313,7 @@ static void register_commands()
     ESP_ERROR_CHECK(esp_console_cmd_register(&wifi_cmd));
 
     // save
-    esp_console_cmd_t save_cmd =
-        make_cmd("save", "Persist current configuration to NVS", cmd_save);
+    esp_console_cmd_t save_cmd = make_cmd("save", "Persist current configuration to NVS", cmd_save);
     ESP_ERROR_CHECK(esp_console_cmd_register(&save_cmd));
 
     // reboot

@@ -4,6 +4,9 @@
 
 #include <ArduinoJson.h>
 
+namespace control_form
+{
+
 // ── GetConfig ─────────────────────────────────────────────────────────────────
 
 std::string GetConfig::to_json() const
@@ -85,3 +88,5 @@ Benchmark Benchmark::from_json(const std::string& json)
     f.coluuid = get_opt_str(doc["coluuid"]);
     return f;
 }
+
+} // namespace control_form

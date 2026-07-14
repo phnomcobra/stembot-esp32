@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.cpp" "configure.cpp" "network.cpp" "processor.cpp"
+    SRCS "main.cpp" "configure.cpp" "ethernet.cpp" "processor.cpp"
     INCLUDE_DIRS "."
     REQUIRES kvstore
     REQUIRES executor
@@ -9,4 +9,5 @@ idf_component_register(
     REQUIRES esp_event
     REQUIRES esp_netif
     REQUIRES esp_eth
+    REQUIRES esp_timer
 )

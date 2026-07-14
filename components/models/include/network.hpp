@@ -18,6 +18,9 @@
 #include <string>
 #include <vector>
 
+namespace network_message
+{
+
 // ── Hop ───────────────────────────────────────────────────────────────────────
 // A single hop recorded when tracing a ticket through the network.
 // Maps to Python's Hop(BaseModel) / Rust's models::control::Hop.
@@ -170,3 +173,5 @@ enum class NetworkMessageType
 // NetworkMessageType.  Returns Unknown if the type tag is absent or
 // unrecognised.  Does not fully deserialise the message.
 NetworkMessageType network_message_type(const std::string& json);
+
+} // namespace network_message

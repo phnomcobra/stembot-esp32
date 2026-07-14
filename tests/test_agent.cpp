@@ -17,6 +17,9 @@
 #include <ArduinoJson.h>
 #include <catch2/catch_test_macros.hpp>
 
+using namespace control_form;
+using namespace network_message;
+
 // ── Canonical test fixtures
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 

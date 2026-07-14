@@ -1,6 +1,6 @@
 #include "config.hpp"
 #include "esp_log.h"
-#include "network.hpp"
+#include "ethernet.hpp"
 
 extern void start_console();
 extern void start_processor();
