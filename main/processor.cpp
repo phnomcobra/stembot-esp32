@@ -30,6 +30,7 @@ void processor_task(void* p)
         if (messages_response_json.empty())
         {
             ESP_LOGE("Processor", "Failed to receive response");
+            vTaskDelay(10000 / portTICK_PERIOD_MS);
             continue;
         }
 
