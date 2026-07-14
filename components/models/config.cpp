@@ -36,14 +36,10 @@ Config::Config()
             Config::_kvstore.getString("agtuuid", "00000000-0000-0000-0000-000000000000").c_str(),
             sizeof(agtuuid));
 
-    std::string stored_key = Config::_kvstore.getString("key", "");
-    if (stored_key.empty())
+    size_t key_len = Config::_kvstore.getBytes("key", key, sizeof(key));
+    if (key_len != sizeof(key))
     {
         default_key(key);
-    }
-    else
-    {
-        memcpy(key, stored_key.data(), std::min(stored_key.size(), sizeof(key)));
     }
 
     Config::peerUrl = Config::_kvstore.getString("peer_url", "");

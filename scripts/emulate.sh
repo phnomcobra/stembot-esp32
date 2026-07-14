@@ -55,7 +55,7 @@ QEMU_SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.qemu"
 
 # NIC: SLIRP user-mode networking with the OpenCores Ethernet model.
 # hostfwd rules let the host initiate connections to the agent's HTTP listener.
-QEMU_NIC="user,model=open_eth,hostfwd=tcp::8080-:8080"
+QEMU_NIC="user,model=open_eth,hostfwd=tcp::8081-:8081"
 
 # ICMP (ping) forwarding via SLIRP requires the host kernel to allow
 # unprivileged processes to open raw ICMP sockets.  On Linux this is
@@ -78,7 +78,7 @@ idf.py \
 
 echo ""
 echo "=== Starting QEMU emulation (Ctrl+] to quit) ==="
-echo "    Agent HTTP reachable at http://localhost:8080"
+echo "    Agent HTTP reachable at http://localhost:8081"
 echo ""
 exec idf.py \
     -B "${QEMU_BUILD_DIR}" \
