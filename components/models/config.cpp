@@ -1,6 +1,7 @@
 #include "config.hpp"
 
 #include "psa/crypto.h"
+#include <ArduinoJson.h>
 
 #include <cstring>
 
@@ -63,4 +64,19 @@ void Config::save()
     Config::_kvstore.putString("wifi_password", wifiPassword);
     Config::_kvstore.putBool("debug", debug);
     Config::_kvstore.putBool("polling", polling);
+}
+
+std::string Config::to_json() const
+{
+    JsonDocument doc;
+
+    doc["agtuuid"] = Config::agtuuid;
+    doc["peerUrl"] = Config::peerUrl;
+    doc["wifiSSID"] = Config::wifiSSID;
+    doc["debug"] = Config::debug;
+    doc["polling"] = Config::polling;
+
+    std::string json;
+    serializeJson(doc, json);
+    return json;
 }

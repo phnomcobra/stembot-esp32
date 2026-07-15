@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "ethernet.cpp"
+    SRCS "ethernet.cpp" "time.cpp"
     INCLUDE_DIRS "include"
     REQUIRES esp_wifi
     REQUIRES esp_event

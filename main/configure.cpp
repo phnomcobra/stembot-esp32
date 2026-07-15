@@ -20,6 +20,7 @@
 #include "lwip/ip_addr.h"
 #include "lwip/netdb.h"
 #include "ethernet.hpp"
+#include "time.hpp"
 
 #include <cinttypes>
 #include <cstdio>
@@ -134,6 +135,7 @@ static int cmd_wifi_connect(int /*argc*/, char** /*argv*/)
         return 1;
     }
     network_wifi_connect(g_config.wifiSSID, g_config.wifiPassword);
+    start_sntp();
     return 0;
 }
 
