@@ -51,12 +51,6 @@ static esp_err_t http_event_handler(esp_http_client_event_t* evt)
 
 // ── AgentClient ───────────────────────────────────────────────────────────────
 
-AgentClient::AgentClient(std::string url, const uint8_t key[32], std::string agtuuid)
-    : url_(std::move(url)), agtuuid_(std::move(agtuuid))
-{
-    memcpy(key_, key, 32);
-}
-
 std::string AgentClient::send_control_form(const std::string& form_json)
 {
     return post_encrypted(form_json);

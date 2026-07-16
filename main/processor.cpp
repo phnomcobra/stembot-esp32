@@ -4,51 +4,60 @@
 #include "network.hpp"
 #include "time.hpp"
 
+#include <ArduinoJson.h>
 #include <esp_log.h>
 #include <esp_timer.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
 TaskHandle_t processor_task_handle;
+AgentClient client;
+Config config;
 
 std::string process_control_form(const std::string& form_json)
 {
     control_form::ControlFormType type = control_form::control_form_type(form_json);
     switch (type) {
-    case control_form::ControlFormType::GetConfig:
-    {
-        auto form = control_form::GetConfig::from_json(form_json);
-        ESP_LOGI("Processor", "Processing GetConfig form");
-        form.config_json = Config().to_json();
-        return form.to_json();
-    }
-    case control_form::ControlFormType::Benchmark:
-    {
-        auto form = control_form::Benchmark::from_json(form_json);
-        ESP_LOGI("Processor", "Processing Benchmark form");
-        if (form.inbound_size.has_value()) form.payload = std::string(*form.inbound_size, '0');
-        else form.payload = std::nullopt;
+        case control_form::ControlFormType::GetConfig:
+        {
+            auto form = control_form::GetConfig::from_json(form_json);
+            if (config.debug) ESP_LOGI("Processor", "Processing GetConfig form");
+            form.config_json = Config().to_json();
+            return form.to_json();
+        }
+        case control_form::ControlFormType::Benchmark:
+        {
+            auto form = control_form::Benchmark::from_json(form_json);
+            if (config.debug) ESP_LOGI("Processor", "Processing Benchmark form");
+            if (form.inbound_size.has_value()) form.payload = std::string(*form.inbound_size, '0');
+            else form.payload = std::nullopt;
 
-        // Add processing logic here
-        return form.to_json();
-    }
-    default:
-        ESP_LOGW("Processor", "Unknown control form type");
-        return form_json; // Echo back unrecognized forms
+            // Add processing logic here
+            return form.to_json();
+        }
+        default:
+        {
+            if (config.debug)
+            {
+                JsonDocument doc;
+                deserializeJson(doc, form_json);
+                ESP_LOGW("Processor", "Unknown control form type: %s", doc["type"] | "(none)");
+            }
+            return form_json; // Echo back unrecognized forms
+        }
     }
 }
 
 
 void process_network_message(const std::string& msg_json)
 {
-    Config config;
-    AgentClient agent_client(config.peerUrl, config.key, config.agtuuid);
-
     network_message::NetworkMessageType type = network_message::network_message_type(msg_json);
 
     switch (type) {
         case network_message::NetworkMessageType::TicketRequest:
         {
+            if (config.debug) ESP_LOGI("Processor", "Processing ticket request network message");
+
             auto ticket = network_message::NetworkTicket::from_json(msg_json);
 
             if(ticket.tracing) {
@@ -58,7 +67,7 @@ void process_network_message(const std::string& msg_json)
                 ticket_trace_response.hop_time = get_current_time();
                 ticket_trace_response.src = config.agtuuid;
                 ticket_trace_response.dest = ticket.src;
-                agent_client.send_network_message(ticket_trace_response.to_json());
+                client.send_network_message(ticket_trace_response.to_json());
             }
 
             ticket.form_json = process_control_form(ticket.form_json);
@@ -70,7 +79,7 @@ void process_network_message(const std::string& msg_json)
                 trace_response.hop_time = get_current_time();
                 trace_response.src = config.agtuuid;
                 trace_response.dest = ticket.src;
-                agent_client.send_network_message(trace_response.to_json());
+                client.send_network_message(trace_response.to_json());
             }
 
             ticket.dest = ticket.src;
@@ -78,13 +87,19 @@ void process_network_message(const std::string& msg_json)
 
             auto msg_json = ticket.to_json("ticket_response");
 
-            agent_client.send_network_message(msg_json);
+            client.send_network_message(msg_json);
 
             break;
         }
         default:
         {
-            ESP_LOGW("Processor", "Unknown network message type");
+            if (config.debug)
+            {
+                JsonDocument doc;
+                deserializeJson(doc, msg_json);
+                ESP_LOGW("Processor", "Unknown network message type: %s", doc["type"] | "(none)");
+            }
+
             break;
         }
     }
@@ -98,12 +113,17 @@ void processor_task(void* p)
 
     for (;;)
     {
-        // Task code goes here
-        Config config;
+        if (idle) {
+            config.load();
+            client.set_url(config.peerUrl);
+            client.set_agtuuid(config.agtuuid);
+            client.set_key(config.key);
+            vTaskDelay(config.poll_ticks);
+        }
 
         if (!config.polling)
         {
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            idle = true;
             continue;
         }
 
@@ -112,16 +132,11 @@ void processor_task(void* p)
         messages_request.timestamp = static_cast<double>(esp_timer_get_time()) / 1e6;
         messages_request.limit = 1;
 
-        AgentClient agent_client(config.peerUrl, config.key, config.agtuuid);
-
-        std::string messages_response_json = agent_client.send_network_message(messages_request.to_json());
+        std::string messages_response_json = client.send_network_message(messages_request.to_json());
         if (messages_response_json.empty())
         {
-            if (config.debug)
-            {
-                ESP_LOGE("Processor", "Failed to receive response");
-            }
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            if (config.debug) ESP_LOGE("Processor", "Failed to receive response");
+            idle = true;
             continue;
         }
 
@@ -129,13 +144,6 @@ void processor_task(void* p)
         idle = messages_response.message_jsons.empty();
 
         for (const std::string& msg_json : messages_response.message_jsons) process_network_message(msg_json);
-
-        if (config.debug)
-        {
-            ESP_LOGI("Processor", "Received %zu messages", messages_response.message_jsons.size());
-        }
-
-        if (idle) vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 

@@ -32,6 +32,17 @@ void Config::set_passphrase(const std::string& passphrase)
 
 Config::Config()
 {
+    load();
+}
+
+
+Config::~Config()
+{
+    Config::_kvstore.end();
+}
+
+void Config::load()
+{
     Config::_kvstore.begin("config");
     strncpy(agtuuid,
             Config::_kvstore.getString("agtuuid", "00000000-0000-0000-0000-000000000000").c_str(),
@@ -48,11 +59,6 @@ Config::Config()
     Config::wifiPassword = Config::_kvstore.getString("wifi_password", "");
     Config::debug = Config::_kvstore.getBool("debug", false);
     Config::polling = Config::_kvstore.getBool("polling", false);
-}
-
-Config::~Config()
-{
-    Config::_kvstore.end();
 }
 
 void Config::save()

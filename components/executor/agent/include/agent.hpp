@@ -14,6 +14,7 @@
 // before encrypting.
 
 #include <cstdint>
+#include <cstring>
 #include <optional>
 #include <string>
 #include <vector>
@@ -59,9 +60,6 @@ std::string set_isrc_json(const std::string& msg_json, const std::string& isrc);
 class AgentClient
 {
 public:
-    // Construct with explicit credentials (mirrors Rust with_credentials).
-    AgentClient(std::string url, const uint8_t key[32], std::string agtuuid);
-
     // Send an encrypted control-form JSON and return the decrypted response
     // JSON.  Returns an empty string on any error.
     std::string send_control_form(const std::string& form_json);
@@ -70,6 +68,10 @@ public:
     // response JSON.  Automatically sets isrc to agtuuid before encrypting.
     // Returns an empty string on any error.
     std::string send_network_message(const std::string& msg_json);
+
+    void set_url(const std::string& url) { url_ = url; }
+    void set_agtuuid(const std::string& agtuuid) { agtuuid_ = agtuuid; }
+    void set_key(const uint8_t key[32]) { std::memcpy(key_, key, 32); }
 
 private:
     std::string url_;
