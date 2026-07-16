@@ -82,9 +82,10 @@ void process_network_message(const std::string& msg_json)
                 client.send_network_message(trace_response.to_json());
             }
 
+            // invert src and dest for the response
+            // turns ticket request into a ticket response
             ticket.dest = ticket.src;
             ticket.src = config.agtuuid;
-
             auto msg_json = ticket.to_json("ticket_response");
 
             client.send_network_message(msg_json);
@@ -129,7 +130,7 @@ void processor_task(void* p)
 
         network_message::NetworkMessagesRequest messages_request;
         messages_request.src = config.agtuuid;
-        messages_request.timestamp = static_cast<double>(esp_timer_get_time()) / 1e6;
+        messages_request.timestamp = get_current_time();
         messages_request.limit = 1;
 
         std::string messages_response_json = client.send_network_message(messages_request.to_json());
