@@ -41,6 +41,7 @@ std::string process_control_form(const std::string& form_json)
             {
                 JsonDocument doc;
                 deserializeJson(doc, form_json);
+                doc["error"] = "Unknown control form type";
                 ESP_LOGW("Processor", "Unknown control form type: %s", doc["type"] | "(none)");
             }
             return form_json; // Echo back unrecognized forms
@@ -92,15 +93,26 @@ void process_network_message(const std::string& msg_json)
 
             break;
         }
+        case network_message::NetworkMessageType::Ping:
+        {
+            if (config.debug) ESP_LOGI("Processor", "Processing ping network message");
+
+            auto ping = network_message::Ping::from_json(msg_json);
+
+            network_message::Acknowledgement ack;
+            ack.ack_type = "ping";
+            ack.src = config.agtuuid;
+            ack.dest = ping.src;
+            ack.timestamp = get_current_time();
+            client.send_network_message(ack.to_json());
+
+            break;
+        }
         default:
         {
-            if (config.debug)
-            {
-                JsonDocument doc;
-                deserializeJson(doc, msg_json);
-                ESP_LOGW("Processor", "Unknown network message type: %s", doc["type"] | "(none)");
-            }
-
+            JsonDocument doc;
+            deserializeJson(doc, msg_json);
+            if (config.debug) ESP_LOGW("Processor", "Unknown network message type: %s", doc["type"] | "(none)");
             break;
         }
     }
