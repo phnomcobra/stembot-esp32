@@ -12,17 +12,22 @@ static void default_key(uint8_t out[32])
     static const char passphrase[] = "changeme";
     size_t hash_len = 0;
     psa_crypto_init();
-    psa_hash_compute(PSA_ALG_SHA_256, reinterpret_cast<const uint8_t*>(passphrase),
-                     sizeof(passphrase) - 1, // exclude null terminator
-                     out, 32, &hash_len);
+    const psa_status_t st = psa_hash_compute(
+        PSA_ALG_SHA_256, reinterpret_cast<const uint8_t*>(passphrase), sizeof(passphrase) - 1,
+        out, 32, &hash_len);
+    if (st != PSA_SUCCESS || hash_len != 32)
+        memset(out, 0, 32);
 }
 
 static void set_key_with_passphrase(uint8_t out[32], const std::string& passphrase)
 {
     size_t hash_len = 0;
     psa_crypto_init();
-    psa_hash_compute(PSA_ALG_SHA_256, reinterpret_cast<const uint8_t*>(passphrase.data()),
-                     passphrase.size(), out, 32, &hash_len);
+    const psa_status_t st = psa_hash_compute(
+        PSA_ALG_SHA_256, reinterpret_cast<const uint8_t*>(passphrase.data()), passphrase.size(),
+        out, 32, &hash_len);
+    if (st != PSA_SUCCESS || hash_len != 32)
+        memset(out, 0, 32);
 }
 
 void Config::set_passphrase(const std::string& passphrase)
