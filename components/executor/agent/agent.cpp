@@ -9,6 +9,7 @@
 #include "esp_log.h"
 
 #include <cstring>
+#include <strings.h>
 #include <vector>
 
 static const char* TAG = "agent";
