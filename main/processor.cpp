@@ -162,6 +162,7 @@ void processor_task(void* p)
 
 void start_processor()
 {
-    ESP_ERROR_CHECK(!xTaskCreatePinnedToCore(processor_task, "Processor", 5000, NULL, 2,
-                                             &processor_task_handle, tskNO_AFFINITY));
+    const BaseType_t ok = xTaskCreatePinnedToCore(processor_task, "Processor", 5000, nullptr, 2,
+                                                 &processor_task_handle, tskNO_AFFINITY);
+    ESP_ERROR_CHECK(ok == pdPASS ? ESP_OK : ESP_FAIL);
 }
