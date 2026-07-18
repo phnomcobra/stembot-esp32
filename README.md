@@ -65,3 +65,60 @@ for a full reference.
 
 Run `./scripts/setup.sh` to verify all prerequisites, or `./scripts/setup.sh --install`
 to install any that are missing.
+
+## Agent Configuration (TUI)
+
+The firmware includes a serial REPL for configuring the agent. It is accessible
+through the emulator console or a live serial monitor.
+
+```bash
+# In QEMU (after build):
+./scripts/emulate.sh
+
+# On physical hardware (after flash):
+./scripts/monitor.sh
+```
+
+The prompt `stembot>` appears once the device has booted. Type `help` to list all
+available commands.
+
+### Configuration Workflow
+
+```
+# 1. Show current settings
+stembot> list
+
+# 2. Set individual fields
+stembot> set agtuuid  <uuid>
+stembot> set peerUrl  http://192.168.1.10:8080/mpi
+stembot> set wifiSSID MyNetwork
+stembot> set wifiPassword MyPassword
+stembot> set passphrase changeme
+
+# 3. Persist settings to NVS flash
+stembot> save
+
+# 4. Connect to Wi-Fi (optional — also happens automatically on next boot)
+stembot> wifi_connect
+
+# 5. Reboot to apply all settings
+stembot> reboot
+```
+
+### TUI Command Reference
+
+| Command | Description |
+|---|---|
+| `list` | Show all current configuration values. |
+| `set <field> <value>` | Set a configuration field in memory. Changes are not persisted until `save` is run. Valid fields: `agtuuid`, `peerUrl`, `wifiSSID`, `wifiPassword`, `passphrase`. |
+| `save` | Write current in-memory configuration to NVS flash. |
+| `reboot` | Reboot the device. |
+| `wifi_connect` | Connect to Wi-Fi using the stored `wifiSSID` and `wifiPassword`. |
+| `ping <host> [-c <n>]` | Send ICMP echo requests to a hostname or IP address. |
+| `net_info` | Show the current IP address, netmask, gateway, and DNS server. |
+| `help` | List all registered commands with their descriptions. |
+
+> **Note:** `set` only updates in-memory values. Always run `save` before `reboot`
+> to make changes permanent. The encryption passphrase is stored as a derived
+> AES-256 key; the raw passphrase is not retained after `save`.
+
