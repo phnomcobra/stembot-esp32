@@ -193,7 +193,8 @@ TEST_CASE("set_isrc_json \u2014 overwrites existing isrc", "[agent][set_isrc]")
 static JsonDocument parse_json(const std::string& json)
 {
     JsonDocument doc;
-    deserializeJson(doc, json);
+    const auto err = deserializeJson(doc, json);
+    REQUIRE(!err);
     return doc;
 }
 
