@@ -20,9 +20,9 @@ implementations:
   messages to other nodes.
 - **No routing table** — uses the single peer as a default route.
 - **Serial processing** — polls and processes one network message at a time.
-- **No DAO / kvstore** — no data object abstraction layer or key-value storage.
+- **No DAO** — no data object abstraction layer.
 - **Serial logging only** — all log output goes to the serial port via `ESP_LOG*`.
-- **Core control forms** — initially handles `GetPeers`, `GetConfig`, and `Benchmark`
+- **Core control forms** — initially handles `GetConfig`, and `Benchmark`
   forms via ticket request processing.
 - **Ticket model** — processes ticket requests, produces ticket responses, and
   optionally produces ticket traces. Does not cache tickets or traces.
