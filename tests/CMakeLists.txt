@@ -24,6 +24,13 @@ find_package(MbedTLS REQUIRED)
 # angle-bracket sub-includes) must be on the include path.
 set(ARDUINOJSON_ROOT
     ${CMAKE_CURRENT_SOURCE_DIR}/../managed_components/bblanchon__arduinojson)
+
+if(NOT EXISTS "${ARDUINOJSON_ROOT}/ArduinoJson.h")
+    message(FATAL_ERROR
+        "ArduinoJson headers not found at ${ARDUINOJSON_ROOT}. "
+        "Run ./scripts/build.sh once to populate managed_components/, or add ArduinoJson to the native test toolchain.")
+endif()
+
 set(ARDUINOJSON_INCLUDE ${ARDUINOJSON_ROOT} ${ARDUINOJSON_ROOT}/src)
 
 # Compile the models component (control + network + utils) as a plain static library
