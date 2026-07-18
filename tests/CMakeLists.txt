@@ -14,28 +14,83 @@ if(ENABLE_CLANG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
 endif()
 
-# Conan provides Catch2 via the toolchain file injected by CMakePresets.json
+# Conan provides Catch2 and MbedTLS via the toolchain file injected by CMakePresets.json
 find_package(Catch2 REQUIRED)
+find_package(MbedTLS REQUIRED)
 
-# Compile the helloworld component as a plain static library for the host
-add_library(helloworld STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../components/helloworld/helloworld.cpp
+# ArduinoJson — header-only; reuse the copy already fetched by the ESP-IDF
+# Component Manager so the native tests stay in sync with the firmware build.
+# Both the root dir (for ArduinoJson.h) and src/ (for <ArduinoJson/...>
+# angle-bracket sub-includes) must be on the include path.
+set(ARDUINOJSON_ROOT
+    ${CMAKE_CURRENT_SOURCE_DIR}/../managed_components/bblanchon__arduinojson)
+
+if(NOT EXISTS "${ARDUINOJSON_ROOT}/ArduinoJson.h")
+    message(FATAL_ERROR
+        "ArduinoJson headers not found at ${ARDUINOJSON_ROOT}. "
+        "Run ./scripts/build.sh once to populate managed_components/, or add ArduinoJson to the native test toolchain.")
+endif()
+
+set(ARDUINOJSON_INCLUDE ${ARDUINOJSON_ROOT} ${ARDUINOJSON_ROOT}/src)
+
+# Compile the models component (control + network + utils) as a plain static library
+add_library(models STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/control.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/network.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/utils.cpp
 )
-target_include_directories(helloworld PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../components/helloworld/include
+target_include_directories(models PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/include
+    ${ARDUINOJSON_INCLUDE}
 )
 
-# Test executable
-add_executable(test_helloworld
-    test_helloworld.cpp
+# Test executable — control form serialisation / deserialisation
+add_executable(test_control
+    test_control.cpp
 )
-target_link_libraries(test_helloworld
+target_link_libraries(test_control
     PRIVATE
         Catch2::Catch2WithMain
-        helloworld
+        models
+)
+
+# Compile the agent crypto helpers (AES-256-EAX + set_isrc_json) as a static
+# library for the host.  Only aes_eax.cpp is compiled here — agent.cpp depends
+# on esp_http_client which is ESP-IDF-only.
+add_library(agent_crypto STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/executor/agent/aes_eax.cpp
+)
+target_include_directories(agent_crypto PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/executor/agent/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/include
+    ${ARDUINOJSON_INCLUDE}
+)
+target_link_libraries(agent_crypto PUBLIC MbedTLS::mbedtls models)
+
+# Test executable — network message serialisation / deserialisation
+add_executable(test_network
+    test_network.cpp
+)
+target_link_libraries(test_network
+    PRIVATE
+        Catch2::Catch2WithMain
+        models
+)
+
+# Test executable — AgentClient helpers (crypto + set_isrc + canonical JSON)
+add_executable(test_agent
+    test_agent.cpp
+)
+target_link_libraries(test_agent
+    PRIVATE
+        Catch2::Catch2WithMain
+        agent_crypto
+        models
 )
 
 # Wire Catch2 test discovery into CTest
 include(CTest)
 include(Catch)
-catch_discover_tests(test_helloworld)
+catch_discover_tests(test_control)
+catch_discover_tests(test_network)
+catch_discover_tests(test_agent)

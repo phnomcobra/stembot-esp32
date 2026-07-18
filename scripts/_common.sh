@@ -9,6 +9,19 @@ case "$(uname -s)" in
     *)      _OS="unknown" ;;
 esac
 
+# On macOS, ensure the compiler uses the full SDK headers.  macOS 26 (Tahoe)
+# reorganised the CLT so that the full libc++ headers live only in the
+# SDK-specific directory; without SDKROOT the compiler falls back to a minimal
+# stub directory (~11 helper headers) and fails to locate <vector>, <chrono>,
+# etc.  Using SDKROOT (rather than CPLUS_INCLUDE_PATH) keeps the C and C++
+# header search order intact so that #include_next works correctly.
+if [[ "$_OS" == "macos" ]] && command -v xcrun &>/dev/null; then
+    _sdk_root="$(xcrun --show-sdk-path 2>/dev/null)"
+    if [[ -d "$_sdk_root" ]]; then
+        export SDKROOT="$_sdk_root"
+    fi
+fi
+
 # Print the default serial port for the detected platform.
 # Callers should prefer the STEMBOT_PORT environment variable over this value.
 _default_port() {
