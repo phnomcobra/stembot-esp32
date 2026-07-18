@@ -45,12 +45,15 @@ static void on_eth_event(void* /*arg*/, esp_event_base_t /*base*/, int32_t event
     }
 }
 
+#include "time.hpp"
+
 static void on_eth_got_ip(void* /*arg*/, esp_event_base_t /*base*/, int32_t event_id, void* data)
 {
     if (event_id == IP_EVENT_ETH_GOT_IP)
     {
         const auto* ev = static_cast<ip_event_got_ip_t*>(data);
         ESP_LOGI(TAG, "Ethernet got IP: " IPSTR, IP2STR(&ev->ip_info.ip));
+        start_sntp();
     }
 }
 
