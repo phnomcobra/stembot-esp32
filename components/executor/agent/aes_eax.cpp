@@ -42,20 +42,29 @@ std::vector<uint8_t> hex_to_bytes(const std::string& hex)
     std::vector<uint8_t> out;
     if (hex.size() % 2 != 0)
         return out;
+
+    auto nibble = [](char c) -> std::optional<uint8_t>
+    {
+        if (c >= '0' && c <= '9')
+            return static_cast<uint8_t>(c - '0');
+        if (c >= 'a' && c <= 'f')
+            return static_cast<uint8_t>(c - 'a' + 10);
+        if (c >= 'A' && c <= 'F')
+            return static_cast<uint8_t>(c - 'A' + 10);
+        return std::nullopt;
+    };
+
     out.reserve(hex.size() / 2);
     for (size_t i = 0; i < hex.size(); i += 2)
     {
-        auto nibble = [](char c) -> uint8_t
+        const auto hi = nibble(hex[i]);
+        const auto lo = nibble(hex[i + 1]);
+        if (!hi || !lo)
         {
-            if (c >= '0' && c <= '9')
-                return static_cast<uint8_t>(c - '0');
-            if (c >= 'a' && c <= 'f')
-                return static_cast<uint8_t>(c - 'a' + 10);
-            if (c >= 'A' && c <= 'F')
-                return static_cast<uint8_t>(c - 'A' + 10);
-            return 0;
-        };
-        out.push_back(static_cast<uint8_t>((nibble(hex[i]) << 4) | nibble(hex[i + 1])));
+            out.clear();
+            return out;
+        }
+        out.push_back(static_cast<uint8_t>((*hi << 4) | *lo));
     }
     return out;
 }
