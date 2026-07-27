@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "utils.hpp"
 
 void set_opt_str(JsonDocument& doc, const char* key, const std::optional<std::string>& v)
@@ -34,6 +36,36 @@ void set_opt_f64(JsonDocument& doc, const char* key, const std::optional<double>
     {
         doc[key] = nullptr;
     }
+}
+
+void set_opt_str_array(JsonDocument& doc, const char* key, const std::optional<std::vector<std::string>>& v)
+{
+    if (v)
+    {
+        JsonArray arr = doc[key].to<JsonArray>();
+        for (const auto& s : *v)
+        {
+            arr.add(s);
+        }
+    }
+    else
+    {
+        doc[key] = nullptr;
+    }
+}
+
+std::optional<std::vector<std::string>> get_opt_str_array(JsonVariantConst v)
+{
+    if (v.isNull())
+    {
+        return std::nullopt;
+    }
+    std::vector<std::string> result;
+    for (JsonVariantConst item : v.as<JsonArrayConst>())
+    {
+        result.push_back(item.as<std::string>());
+    }
+    return result;
 }
 
 std::optional<std::string> get_opt_str(JsonVariantConst v)
