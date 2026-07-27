@@ -58,6 +58,8 @@ struct NetworkMessagesRequest
     std::optional<std::string> isrc;
     std::optional<double> timestamp;
     std::optional<int64_t> limit; // null means "no limit"
+    std::optional<std::vector<std::string>> network_whitelist; // null means "all network message types"
+    std::optional<std::vector<std::string>> control_whitelist; // null means "all control form types"
     std::optional<std::string> objuuid;
     std::optional<std::string> coluuid;
 

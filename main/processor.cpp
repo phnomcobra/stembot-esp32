@@ -144,6 +144,8 @@ void processor_task(void* p)
         messages_request.src = config.agtuuid;
         messages_request.timestamp = get_current_time();
         messages_request.limit = 1;
+        messages_request.network_whitelist = std::vector<std::string>{"ping", "messages_request", "acknowledgement", "ticket_request"};
+        messages_request.control_whitelist = std::vector<std::string>{"get_config", "benchmark"};
 
         std::string messages_response_json = client.send_network_message(messages_request.to_json());
         if (messages_response_json.empty())

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-07-26
+
+### Added
+- `network_whitelist` and `control_whitelist` fields on `NetworkMessagesRequest` for server-side filtering of polled messages.
+- `processor` component uses whitelisted network messages requests.
+- `utils` component: added helper functions for string list options.
+
 ## [2.0.0] - 2026-07-18
 
 ### Added

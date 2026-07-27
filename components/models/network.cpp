@@ -49,6 +49,8 @@ std::string NetworkMessagesRequest::to_json() const
     set_opt_str(doc, "isrc", isrc);
     set_opt_f64(doc, "timestamp", timestamp);
     set_opt_i64(doc, "limit", limit);
+    set_opt_str_array(doc, "network_whitelist", network_whitelist);
+    set_opt_str_array(doc, "control_whitelist", control_whitelist);
     set_opt_str(doc, "objuuid", objuuid);
     set_opt_str(doc, "coluuid", coluuid);
     std::string out;
@@ -66,6 +68,8 @@ NetworkMessagesRequest NetworkMessagesRequest::from_json(const std::string& json
     m.isrc = get_opt_str(doc["isrc"]);
     m.timestamp = get_opt_f64(doc["timestamp"]);
     m.limit = get_opt_i64(doc["limit"]);
+    m.network_whitelist = get_opt_str_array(doc["network_whitelist"]);
+    m.control_whitelist = get_opt_str_array(doc["control_whitelist"]);
     m.objuuid = get_opt_str(doc["objuuid"]);
     m.coluuid = get_opt_str(doc["coluuid"]);
     return m;
