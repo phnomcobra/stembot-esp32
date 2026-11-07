@@ -15,8 +15,6 @@ TaskHandle_t crypto_task_handle;
 AgentClient client;
 Config config;
 
-const TickType_t poll_ticks = 60000 / portTICK_PERIOD_MS;
-
 static std::string base64_key(const uint8_t key[32])
 {
     unsigned char encoded[45] = {};
@@ -70,11 +68,17 @@ void crypto_task(void* p)
         client.set_agtuuid(config.agtuuid);
         client.set_keyuuid(config.keyuuid);
         client.set_key(config.key);
-        vTaskDelay(poll_ticks);
+        vTaskDelay(config.crypto_poll_ticks);
 
         if (!config.polling) continue;
 
-        std::string exchange_response = client.send_network_message(current_key_exchange().to_json());
+        std::string exchange_response_json_str = client.send_network_message(current_key_exchange().to_json());
+
+        if (exchange_response_json_str.empty()) continue;
+
+
+
+
         if (
             !exchange_response.empty() &&
             network_message::network_message_type(exchange_response) == network_message::NetworkMessageType::ExchangeKeys

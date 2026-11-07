@@ -1,6 +1,9 @@
-#include "key_derivation.hpp"
+#include "crypto.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <cstring>
+#include <ctime>
 
 #ifdef ESP_PLATFORM
 #include "psa/crypto.h"
@@ -46,4 +49,34 @@ bool derive_user_key(uint8_t out[32], const std::string& passphrase, const std::
                passphrase.size(), reinterpret_cast<const unsigned char*>(salt.data()), salt.size(),
                KDF_ITERATIONS, 32, out) == 0;
 #endif
+}
+
+double user_key_expire_time()
+{
+    return static_cast<double>(std::time(nullptr)) + 600.0;
+}
+
+KeyType key_type_from_string(const std::string& str)
+{
+    std::string normalized = str;
+    std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    if (normalized == "user")
+        return KeyType::USER;
+    if (normalized == "dist")
+        return KeyType::DIST;
+    return KeyType::UNKNOWN;
+}
+
+std::string key_type_to_string(KeyType key_type)
+{
+    switch (key_type)
+    {
+    case KeyType::USER:
+        return "user";
+    case KeyType::DIST:
+        return "dist";
+    default:
+        return "unknown";
+    }
 }

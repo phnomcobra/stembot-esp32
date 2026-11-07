@@ -1,10 +1,10 @@
 #include "config.hpp"
-#include "esp_log.h"
 #include "ethernet.hpp"
 #include "time.hpp"
 
 extern void start_console();
 extern void start_processor();
+extern void start_crypto();
 
 extern "C" void app_main(void)
 {
@@ -22,6 +22,9 @@ extern "C" void app_main(void)
     // Start the serial configuration TUI in its own FreeRTOS task.
     // Returns immediately; the REPL runs in the background.
     start_console();
+
+    // Start the crypto task.
+    start_crypto();
 
     // Start the processor in its own FreeRTOS task.
     // Returns immediately; the processor runs in the background.

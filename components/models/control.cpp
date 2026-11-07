@@ -21,7 +21,7 @@ std::string GetKeyMetadata::to_json() const
         {
             JsonObject entry = array.add<JsonObject>();
             entry["objuuid"] = item.objuuid;
-            entry["type"] = item.type;
+            entry["type"] = key_type_to_string(item.type);
             if (item.agtuuid)
                 entry["agtuuid"] = *item.agtuuid;
             else
@@ -53,7 +53,7 @@ GetKeyMetadata GetKeyMetadata::from_json(const std::string& json)
         {
             KeyMetadata metadata;
             metadata.objuuid = item["objuuid"] | std::string{};
-            metadata.type = item["type"] | std::string{"unknown"};
+            metadata.type = key_type_from_string(item["type"] | std::string{"unknown"});
             metadata.agtuuid = get_opt_str(item["agtuuid"]);
             metadata.ttl = item["ttl"] | 0.0;
             form.metadata->push_back(std::move(metadata));

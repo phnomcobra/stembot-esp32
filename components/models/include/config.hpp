@@ -1,6 +1,7 @@
 #pragma once
 
 #include "kvstore.hpp"
+#include "crypto.hpp"
 
 #include <cstdint>
 #include <freertos/FreeRTOS.h>
@@ -22,11 +23,14 @@ class Config
     char agtuuid[36];
     char keyuuid[36];
     uint8_t key[32];
-    bool user_key = true;
-    double key_ttl = 0.0;
+    KeyType keytype;
+    double keyExpireTime;
+
     bool debug;
     bool polling;
-    TickType_t poll_ticks = 1000 / portTICK_PERIOD_MS;
+
+    TickType_t processor_poll_ticks = 1000 / portTICK_PERIOD_MS;
+    TickType_t crypto_poll_ticks = 60000 / portTICK_PERIOD_MS;
 
     std::string peerUrl;
     std::string wifiSSID;

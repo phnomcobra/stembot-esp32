@@ -36,7 +36,7 @@ set(ARDUINOJSON_INCLUDE ${ARDUINOJSON_ROOT} ${ARDUINOJSON_ROOT}/src)
 # Compile the models component (control + network + utils) as a plain static library
 add_library(models STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/control.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/key_derivation.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/crypto.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/network.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../components/models/utils.cpp
 )

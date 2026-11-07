@@ -31,7 +31,7 @@ std::string process_control_form(const std::string& form_json)
     {
         auto form = control_form::GetKeyMetadata::from_json(form_json);
         form.metadata = std::vector<control_form::KeyMetadata>{
-            {config.keyuuid, config.user_key ? "user" : "dist", std::nullopt, config.key_ttl}};
+            {config.keyuuid, config.keytype, std::nullopt, config.key_ttl}};
         return form.to_json();
     }
     case control_form::ControlFormType::Benchmark:
@@ -149,7 +149,7 @@ void processor_task(void* p)
             client.set_agtuuid(config.agtuuid);
             client.set_keyuuid(config.keyuuid);
             client.set_key(config.key);
-            vTaskDelay(config.poll_ticks);
+            vTaskDelay(config.processor_poll_ticks);
         }
 
         if (!config.polling)

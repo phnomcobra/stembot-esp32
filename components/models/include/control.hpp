@@ -1,5 +1,7 @@
 #pragma once
 
+#include "crypto.hpp"
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -11,7 +13,7 @@ namespace control_form
 struct KeyMetadata
 {
     std::string objuuid;
-    std::string type;
+    KeyType type = KeyType::UNKNOWN;
     std::optional<std::string> agtuuid;
     double ttl = 0.0;
 };

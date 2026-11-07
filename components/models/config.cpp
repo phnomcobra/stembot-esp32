@@ -1,6 +1,5 @@
 #include "config.hpp"
-
-#include "key_derivation.hpp"
+#include "crypto.hpp"
 #include "psa/crypto.h"
 
 #include <ArduinoJson.h>
@@ -25,8 +24,8 @@ void Config::set_passphrase(const std::string& uuid, const std::string& passphra
     derive_user_key(key, passphrase, uuid);
     strncpy(keyuuid, uuid.c_str(), sizeof(keyuuid) - 1);
     keyuuid[sizeof(keyuuid) - 1] = '\0';
-    user_key = true;
-    key_ttl = 0.0;
+    keytype = KeyType::USER;
+    keyExpireTime = user_key_expire_time();
 }
 
 void Config::set_user_key(const std::string& uuid, const std::string& passphrase)
@@ -61,8 +60,8 @@ void Config::load()
     {
         default_key(key);
     }
-    user_key = Config::_kvstore.getBool("user_key", true);
-    key_ttl = Config::_kvstore.getDouble("key_ttl", 0.0);
+    keytype = key_type_from_string(Config::_kvstore.getString("key_type", "user"));
+    keyExpireTime = Config::_kvstore.getDouble("key_expire_time", 0.0);
 
     Config::peerUrl = Config::_kvstore.getString("peer_url", "");
     Config::wifiSSID = Config::_kvstore.getString("wifi_ssid", "");
@@ -76,8 +75,8 @@ void Config::save()
     Config::_kvstore.putString("agtuuid", agtuuid);
     Config::_kvstore.putBytes("key", key, sizeof(key));
     Config::_kvstore.putString("keyuuid", keyuuid);
-    Config::_kvstore.putBool("user_key", user_key);
-    Config::_kvstore.putDouble("key_ttl", key_ttl);
+    Config::_kvstore.putString("key_type", key_type_to_string(keytype));
+    Config::_kvstore.putDouble("key_expire_time", keyExpireTime);
     Config::_kvstore.putString("peer_url", peerUrl);
     Config::_kvstore.putString("wifi_ssid", wifiSSID);
     Config::_kvstore.putString("wifi_password", wifiPassword);

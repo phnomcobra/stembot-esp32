@@ -9,14 +9,34 @@
 // by the Rust assert_ser_eq / assert_deser_roundtrip helpers.
 
 #include "control.hpp"
-#include "key_derivation.hpp"
+#include "crypto.hpp"
 
 #include <ArduinoJson.h>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cstring>
+#include <ctime>
 
 using namespace control_form;
+
+TEST_CASE("key type parsing is case-insensitive", "[crypto][key_type]")
+{
+    REQUIRE(key_type_from_string("user") == KeyType::USER);
+    REQUIRE(key_type_from_string("USER") == KeyType::USER);
+    REQUIRE(key_type_from_string("UsEr") == KeyType::USER);
+    REQUIRE(key_type_from_string("dist") == KeyType::DIST);
+    REQUIRE(key_type_from_string("DIST") == KeyType::DIST);
+    REQUIRE(key_type_from_string("DiSt") == KeyType::DIST);
+    REQUIRE(key_type_from_string("other") == KeyType::UNKNOWN);
+}
+
+TEST_CASE("user key expiration is ten minutes from now", "[crypto][user_key]")
+{
+    const double now = static_cast<double>(std::time(nullptr));
+    const double expiration = user_key_expire_time();
+    REQUIRE(expiration >= now + 600.0);
+    REQUIRE(expiration <= now + 601.0);
+}
 
 TEST_CASE("user key derivation matches Python and Rust v1", "[crypto][user_key]")
 {
@@ -45,7 +65,8 @@ TEST_CASE("GetKeyMetadata matches the v3 wire format", "[control][get_key_metada
     REQUIRE(request["type"] == "get_key_metadata");
     REQUIRE(request["metadata"].isNull());
 
-    form.metadata = std::vector<KeyMetadata>{{"key-1", "dist", std::string{"peer-1"}, 120.5}};
+    form.metadata =
+        std::vector<KeyMetadata>{{"key-1", KeyType::DIST, std::string{"peer-1"}, 120.5}};
     JsonDocument response = parse(form.to_json());
     REQUIRE(response["metadata"][0]["objuuid"] == "key-1");
     REQUIRE(response["metadata"][0]["type"] == "dist");
@@ -56,7 +77,7 @@ TEST_CASE("GetKeyMetadata matches the v3 wire format", "[control][get_key_metada
         R"({"type":"get_key_metadata","error":null,"objuuid":null,"coluuid":null,)"
         R"("metadata":[{"objuuid":"key-1","type":"user","agtuuid":null,"ttl":0}])");
     REQUIRE(parsed.metadata.has_value());
-    REQUIRE(parsed.metadata->front().type == "user");
+    REQUIRE(parsed.metadata->front().type == KeyType::USER);
     REQUIRE(!parsed.metadata->front().agtuuid.has_value());
 }
 
