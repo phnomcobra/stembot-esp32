@@ -9,6 +9,9 @@ bool derive_user_key(uint8_t out[32], const std::string& passphrase, const std::
 
 double user_key_expire_time();
 
+// Stembot-ESP32 does not have a key management system like the Rust or Python agents.
+// There are no AUTO keys
+// Only a single user or distributed key exists at any time
 enum class KeyType
 {
     USER,
@@ -18,4 +21,3 @@ enum class KeyType
 
 KeyType key_type_from_string(const std::string& str);
 std::string key_type_to_string(KeyType key_type);
-

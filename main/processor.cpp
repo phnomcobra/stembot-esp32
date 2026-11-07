@@ -31,7 +31,7 @@ std::string process_control_form(const std::string& form_json)
     {
         auto form = control_form::GetKeyMetadata::from_json(form_json);
         form.metadata = std::vector<control_form::KeyMetadata>{
-            {config.keyuuid, config.keytype, std::nullopt, config.key_ttl}};
+            {config.keyuuid, config.keytype, std::nullopt, config.get_key_ttl()}};
         return form.to_json();
     }
     case control_form::ControlFormType::Benchmark:

@@ -42,6 +42,21 @@ TEST_CASE("ExchangeKeys matches the v3 wire format", "[network][exchange_keys]")
     REQUIRE(network_message_type(exchange.to_json()) == NetworkMessageType::ExchangeKeys);
 }
 
+TEST_CASE("ExchangeKeys selects the distribution with the highest TTL", "[network][exchange_keys]")
+{
+    ExchangeKeys exchange;
+    exchange.distributions = {
+        {"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "older", 30.0},
+        {"d0ebLuGBXzks025c/kmvGn+qmbwqwTkfjCH4F87YuqQ=", "current", 120.0},
+        {"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=", "newer", 90.0},
+    };
+
+    REQUIRE(exchange.best_key_uuid().has_value());
+    REQUIRE(*exchange.best_key_uuid() == "current");
+    REQUIRE(exchange.best_key().has_value());
+    REQUIRE((*exchange.best_key())[0] == 0x77);
+}
+
 // ── canonical wire JSON from stembot-rust/src/models/network.rs ──────────────
 
 static constexpr const char* PING_JSON =

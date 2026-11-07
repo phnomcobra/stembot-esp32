@@ -41,7 +41,7 @@ static int cmd_list(int /*argc*/, char** /*argv*/)
     }
     printf("  %-16s %.*s\r\n", "agtuuid:", 36, g_config.agtuuid);
     printf("  %-16s %.*s\r\n", "keyuuid:", 36, g_config.keyuuid);
-    printf("  %-16s %s\r\n", "keyType:", g_config.user_key ? "user" : "dist");
+    printf("  %-16s %s\r\n", "keyType:", key_type_to_string(g_config.keytype).c_str());
     printf("  %-16s %s\r\n", "key:", key_hex);
     printf("  %-16s %s\r\n", "peerUrl:", g_config.peerUrl.c_str());
     printf("  %-16s %s\r\n", "wifiSSID:", g_config.wifiSSID.c_str());

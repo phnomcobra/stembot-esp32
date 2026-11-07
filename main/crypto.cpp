@@ -9,45 +9,10 @@
 #include <esp_timer.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <mbedtls/base64.h>
 
 TaskHandle_t crypto_task_handle;
 AgentClient client;
 Config config;
-
-static std::string base64_key(const uint8_t key[32])
-{
-    unsigned char encoded[45] = {};
-    size_t length = 0;
-    if (mbedtls_base64_encode(encoded, sizeof(encoded), &length, key, 32) != 0)
-        return {};
-    return {reinterpret_cast<char*>(encoded), length};
-}
-
-static bool apply_key_distribution(const network_message::KeyDistribution& distribution)
-{
-    uint8_t key[32] = {};
-    size_t length = 0;
-    if (mbedtls_base64_decode(key, sizeof(key), &length,
-                              reinterpret_cast<const unsigned char*>(distribution.b64_key.data()),
-                              distribution.b64_key.size()) != 0 ||
-        length != sizeof(key) || distribution.objuuid.empty() || distribution.ttl <= 0.0)
-    {
-        return false;
-    }
-
-    /*
-    memcpy(config.key, key, sizeof(config.key));
-    strncpy(config.keyuuid, distribution.objuuid.c_str(), sizeof(config.keyuuid) - 1);
-    config.keyuuid[sizeof(config.keyuuid) - 1] = '\0';
-    config.user_key = false;
-    config.key_ttl = distribution.ttl;
-    config.save();
-    client.set_key(config.key);
-    client.set_keyuuid(config.keyuuid);
-    */
-    return true;
-}
 
 static network_message::ExchangeKeys current_key_exchange()
 {
@@ -74,18 +39,36 @@ void crypto_task(void* p)
 
         std::string exchange_response_json_str = client.send_network_message(current_key_exchange().to_json());
 
-        if (exchange_response_json_str.empty()) continue;
+        if (exchange_response_json_str.empty()) {
+            ESP_LOGW("Crypto", "Empty exchange response");
+            continue;
+        };
 
-
-
-
-        if (
-            !exchange_response.empty() &&
-            network_message::network_message_type(exchange_response) == network_message::NetworkMessageType::ExchangeKeys
-        )
-        {
-            auto exchange = network_message::ExchangeKeys::from_json(exchange_response);
+        if (network_message::network_message_type(exchange_response_json_str) != network_message::NetworkMessageType::ExchangeKeys) {
+            ESP_LOGW("Crypto", "Unexpected exchange response type", exchange_response_json_str.c_str());
+            continue;
         }
+
+        auto exchange = network_message::ExchangeKeys::from_json(exchange_response_json_str);
+
+        if (!exchange.best_key_uuid().has_value()) {
+            ESP_LOGW("Crypto", "No keys found in exchange response");
+            continue;
+        }
+
+        if (exchange.best_key_uuid().value() == config.keyuuid) {
+            ESP_LOGI("Crypto", "Already using current key");
+            continue;
+        }
+
+        ESP_LOGI("Crypto", "Applying new key: %s", exchange.best_key_uuid().value().c_str());
+
+        auto key = exchange.best_key().value();
+        memcpy(config.key, key.data(), sizeof(config.key));
+        strncpy(config.keyuuid, exchange.best_key_uuid().value().c_str(), sizeof(config.keyuuid) - 1);
+        config.keyuuid[sizeof(config.keyuuid) - 1] = '\0';
+        config.keyExpireTime = get_current_time() + exchange.best_key_ttl().value();
+        config.save();
     }
 }
 

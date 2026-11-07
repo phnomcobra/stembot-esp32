@@ -3,9 +3,23 @@
 #include "utils.hpp"
 
 #include <ArduinoJson.h>
+#include <algorithm>
+#include <mbedtls/base64.h>
 
 namespace network_message
 {
+
+namespace
+{
+const KeyDistribution* best_distribution(const std::vector<KeyDistribution>& distributions)
+{
+    if (distributions.empty())
+        return nullptr;
+    return &*std::max_element(distributions.begin(), distributions.end(),
+                              [](const KeyDistribution& left, const KeyDistribution& right)
+                              { return left.ttl < right.ttl; });
+}
+} // namespace
 
 std::string ExchangeKeys::to_json() const
 {
@@ -50,6 +64,37 @@ ExchangeKeys ExchangeKeys::from_json(const std::string& json)
         message.distributions.push_back(std::move(distribution));
     }
     return message;
+}
+
+std::optional<std::string> ExchangeKeys::best_key_uuid() const
+{
+    const KeyDistribution* distribution = best_distribution(distributions);
+    if (distribution == nullptr)
+        return std::nullopt;
+    return distribution->objuuid;
+}
+
+std::optional<std::array<uint8_t, 32>> ExchangeKeys::best_key() const
+{
+    const KeyDistribution* distribution = best_distribution(distributions);
+    if (distribution == nullptr)
+        return std::nullopt;
+    std::array<uint8_t, 32> key = {};
+    size_t decoded_size = 0;
+    if (mbedtls_base64_decode(key.data(), key.size(), &decoded_size,
+                              reinterpret_cast<const unsigned char*>(distribution->b64_key.data()),
+                              distribution->b64_key.size()) != 0 ||
+        decoded_size != key.size())
+        return std::nullopt;
+    return key;
+}
+
+std::optional<double> ExchangeKeys::best_key_ttl() const
+{
+    const KeyDistribution* distribution = best_distribution(distributions);
+    if (distribution == nullptr)
+        return std::nullopt;
+    return distribution->ttl;
 }
 
 // ── Ping ──────────────────────────────────────────────────────────────────────

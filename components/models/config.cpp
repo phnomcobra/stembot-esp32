@@ -99,3 +99,8 @@ std::string Config::to_json() const
     serializeJson(doc, json);
     return json;
 }
+
+double Config::get_key_ttl()
+{
+    return keyExpireTime - static_cast<double>(time(nullptr));
+}

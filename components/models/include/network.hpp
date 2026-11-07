@@ -13,6 +13,7 @@
 
 #include "control.hpp"
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -66,6 +67,10 @@ struct ExchangeKeys
     std::optional<std::string> coluuid;
 
     std::string to_json() const;
+    std::optional<std::string> best_key_uuid() const;
+    std::optional<std::array<uint8_t, 32>> best_key() const;
+    std::optional<double> best_key_ttl() const;
+
     static ExchangeKeys from_json(const std::string& json);
 };
 
