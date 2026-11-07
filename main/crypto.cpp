@@ -11,8 +11,8 @@
 #include <freertos/task.h>
 
 TaskHandle_t crypto_task_handle;
-AgentClient client;
-Config config;
+extern AgentClient client;
+extern Config config;
 
 static network_message::ExchangeKeys current_key_exchange()
 {
@@ -35,28 +35,36 @@ void crypto_task(void* p)
         client.set_key(config.key);
         vTaskDelay(config.crypto_poll_ticks);
 
-        if (!config.polling) continue;
+        if (!config.polling)
+            continue;
 
-        std::string exchange_response_json_str = client.send_network_message(current_key_exchange().to_json());
+        std::string exchange_response_json_str =
+            client.send_network_message(current_key_exchange().to_json());
 
-        if (exchange_response_json_str.empty()) {
+        if (exchange_response_json_str.empty())
+        {
             ESP_LOGW("Crypto", "Empty exchange response");
             continue;
         };
 
-        if (network_message::network_message_type(exchange_response_json_str) != network_message::NetworkMessageType::ExchangeKeys) {
-            ESP_LOGW("Crypto", "Unexpected exchange response type", exchange_response_json_str.c_str());
+        if (network_message::network_message_type(exchange_response_json_str) !=
+            network_message::NetworkMessageType::ExchangeKeys)
+        {
+            ESP_LOGW("Crypto", "Unexpected exchange response type",
+                     exchange_response_json_str.c_str());
             continue;
         }
 
         auto exchange = network_message::ExchangeKeys::from_json(exchange_response_json_str);
 
-        if (!exchange.best_key_uuid().has_value()) {
+        if (!exchange.best_key_uuid().has_value())
+        {
             ESP_LOGW("Crypto", "No keys found in exchange response");
             continue;
         }
 
-        if (exchange.best_key_uuid().value() == config.keyuuid) {
+        if (exchange.best_key_uuid().value() == config.keyuuid)
+        {
             ESP_LOGI("Crypto", "Already using current key");
             continue;
         }
@@ -65,7 +73,9 @@ void crypto_task(void* p)
 
         auto key = exchange.best_key().value();
         memcpy(config.key, key.data(), sizeof(config.key));
-        strncpy(config.keyuuid, exchange.best_key_uuid().value().c_str(), sizeof(config.keyuuid) - 1);
+
+        strncpy(config.keyuuid, exchange.best_key_uuid().value().c_str(),
+                sizeof(config.keyuuid) - 1);
         config.keyuuid[sizeof(config.keyuuid) - 1] = '\0';
         config.keyExpireTime = get_current_time() + exchange.best_key_ttl().value();
         config.save();

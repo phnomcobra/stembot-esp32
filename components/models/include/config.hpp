@@ -1,7 +1,7 @@
 #pragma once
 
-#include "kvstore.hpp"
 #include "crypto.hpp"
+#include "kvstore.hpp"
 
 #include <cstdint>
 #include <freertos/FreeRTOS.h>
@@ -21,8 +21,8 @@ class Config
 
     std::string to_json() const;
 
-    char agtuuid[36];
-    char keyuuid[36];
+    char agtuuid[37];
+    char keyuuid[37];
     uint8_t key[32];
     KeyType keytype;
     double keyExpireTime;
