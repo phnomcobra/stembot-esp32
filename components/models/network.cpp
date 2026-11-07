@@ -7,6 +7,51 @@
 namespace network_message
 {
 
+std::string ExchangeKeys::to_json() const
+{
+    JsonDocument doc;
+    doc["type"] = "exchange_keys";
+    set_opt_str(doc, "dest", dest);
+    doc["src"] = src;
+    set_opt_str(doc, "isrc", isrc);
+    set_opt_f64(doc, "timestamp", timestamp);
+    set_opt_str(doc, "objuuid", objuuid);
+    set_opt_str(doc, "coluuid", coluuid);
+    JsonArray distributions_json = doc["distributions"].to<JsonArray>();
+    for (const auto& distribution : distributions)
+    {
+        JsonObject item = distributions_json.add<JsonObject>();
+        item["b64_key"] = distribution.b64_key;
+        item["objuuid"] = distribution.objuuid;
+        item["ttl"] = distribution.ttl;
+    }
+    std::string out;
+    serializeJson(doc, out);
+    return out;
+}
+
+ExchangeKeys ExchangeKeys::from_json(const std::string& json)
+{
+    ExchangeKeys message;
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    message.src = doc["src"] | std::string{};
+    message.dest = get_opt_str(doc["dest"]);
+    message.isrc = get_opt_str(doc["isrc"]);
+    message.timestamp = get_opt_f64(doc["timestamp"]);
+    message.objuuid = get_opt_str(doc["objuuid"]);
+    message.coluuid = get_opt_str(doc["coluuid"]);
+    for (JsonObjectConst item : doc["distributions"].as<JsonArrayConst>())
+    {
+        KeyDistribution distribution;
+        distribution.b64_key = item["b64_key"] | std::string{};
+        distribution.objuuid = item["objuuid"] | std::string{};
+        distribution.ttl = item["ttl"] | 0.0;
+        message.distributions.push_back(std::move(distribution));
+    }
+    return message;
+}
+
 // ── Ping ──────────────────────────────────────────────────────────────────────
 
 std::string Ping::to_json() const
@@ -262,6 +307,8 @@ NetworkMessageType network_message_type(const std::string& json)
     const char* type = doc["type"] | "";
     if (strcmp(type, "ping") == 0)
         return NetworkMessageType::Ping;
+    if (strcmp(type, "exchange_keys") == 0)
+        return NetworkMessageType::ExchangeKeys;
     if (strcmp(type, "messages_request") == 0)
         return NetworkMessageType::MessagesRequest;
     if (strcmp(type, "messages_response") == 0)

@@ -8,8 +8,27 @@
 namespace control_form
 {
 
-// Control forms — port of stembot-rust/src/models/control.rs (GetConfig,
-// Benchmark, GetPeers only).  Serialization uses ArduinoJson.
+struct KeyMetadata
+{
+    std::string objuuid;
+    std::string type;
+    std::optional<std::string> agtuuid;
+    double ttl = 0.0;
+};
+
+struct GetKeyMetadata
+{
+    std::optional<std::vector<KeyMetadata>> metadata;
+    std::optional<std::string> error;
+    std::optional<std::string> objuuid;
+    std::optional<std::string> coluuid;
+
+    std::string to_json() const;
+    static GetKeyMetadata from_json(const std::string& json);
+};
+
+// Control forms — port of stembot-rust/src/models/control.rs. Serialization
+// uses ArduinoJson.
 //
 // All optional fields serialise as JSON null to match the Python/Rust wire
 // format.  The type tag is embedded in each object's JSON output.
@@ -53,6 +72,7 @@ enum class ControlFormType
 {
     Benchmark,
     GetConfig,
+    GetKeyMetadata,
     Unknown
 };
 

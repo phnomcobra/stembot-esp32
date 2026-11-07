@@ -90,10 +90,11 @@ stembot> list
 
 # 2. Set individual fields
 stembot> set agtuuid  <uuid>
+stembot> set keyuuid  <key-uuid>
 stembot> set peerUrl  http://192.168.1.10:8080/mpi
 stembot> set wifiSSID MyNetwork
 stembot> set wifiPassword MyPassword
-stembot> set passphrase changeme
+stembot> set_user_key <key-uuid> changeme
 
 # 3. Persist settings to NVS flash
 stembot> save
@@ -110,7 +111,8 @@ stembot> reboot
 | Command | Description |
 |---|---|
 | `list` | Show all current configuration values. |
-| `set <field> <value>` | Set a configuration field in memory. Changes are not persisted until `save` is run. Valid fields: `agtuuid`, `peerUrl`, `wifiSSID`, `wifiPassword`, `passphrase`. |
+| `set <field> <value>` | Set a configuration field in memory. Changes are not persisted until `save` is run. Valid fields: `agtuuid`, `keyuuid`, `peerUrl`, `wifiSSID`, `wifiPassword`, `passphrase`, `polling`, `debug`. Set `keyuuid` before deriving a passphrase key. |
+| `set_user_key <key-uuid> <passphrase>` | Derive and select a user key identified by `<key-uuid>`. The passphrase is not stored. |
 | `save` | Write current in-memory configuration to NVS flash. |
 | `reboot` | Reboot the device. |
 | `wifi_connect` | Connect to Wi-Fi using the stored `wifiSSID` and `wifiPassword`. |
@@ -118,7 +120,8 @@ stembot> reboot
 | `net_info` | Show the current IP address, netmask, gateway, and DNS server. |
 | `help` | List all registered commands with their descriptions. |
 
-> **Note:** `set` only updates in-memory values. Always run `save` before `reboot`
-> to make changes permanent. The encryption passphrase is stored as a derived
-> AES-256 key; the raw passphrase is not retained after `save`.
-
+> **Note:** `set` and `set_user_key` only update in-memory values. Always run
+> `save` before `reboot` to make changes permanent. While polling, the agent
+> exchanges distributed keys with its peer and rotates to the most current
+> received key. It keeps only the active key and UUID locally; no keystore is
+> used on the ESP32.

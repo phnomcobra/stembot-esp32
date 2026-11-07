@@ -7,6 +7,61 @@
 namespace control_form
 {
 
+std::string GetKeyMetadata::to_json() const
+{
+    JsonDocument doc;
+    doc["type"] = "get_key_metadata";
+    set_opt_str(doc, "error", error);
+    set_opt_str(doc, "objuuid", objuuid);
+    set_opt_str(doc, "coluuid", coluuid);
+    if (metadata)
+    {
+        JsonArray array = doc["metadata"].to<JsonArray>();
+        for (const auto& item : *metadata)
+        {
+            JsonObject entry = array.add<JsonObject>();
+            entry["objuuid"] = item.objuuid;
+            entry["type"] = item.type;
+            if (item.agtuuid)
+                entry["agtuuid"] = *item.agtuuid;
+            else
+                entry["agtuuid"] = nullptr;
+            entry["ttl"] = item.ttl;
+        }
+    }
+    else
+    {
+        doc["metadata"] = nullptr;
+    }
+    std::string out;
+    serializeJson(doc, out);
+    return out;
+}
+
+GetKeyMetadata GetKeyMetadata::from_json(const std::string& json)
+{
+    GetKeyMetadata form;
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    form.error = get_opt_str(doc["error"]);
+    form.objuuid = get_opt_str(doc["objuuid"]);
+    form.coluuid = get_opt_str(doc["coluuid"]);
+    if (!doc["metadata"].isNull())
+    {
+        form.metadata = std::vector<KeyMetadata>{};
+        for (JsonObjectConst item : doc["metadata"].as<JsonArrayConst>())
+        {
+            KeyMetadata metadata;
+            metadata.objuuid = item["objuuid"] | std::string{};
+            metadata.type = item["type"] | std::string{"unknown"};
+            metadata.agtuuid = get_opt_str(item["agtuuid"]);
+            metadata.ttl = item["ttl"] | 0.0;
+            form.metadata->push_back(std::move(metadata));
+        }
+    }
+    return form;
+}
+
 // ── GetConfig ─────────────────────────────────────────────────────────────────
 
 std::string GetConfig::to_json() const
@@ -56,6 +111,8 @@ ControlFormType control_form_type(const std::string& json)
         return ControlFormType::Benchmark;
     if (strcmp(type, "get_config") == 0)
         return ControlFormType::GetConfig;
+    if (strcmp(type, "get_key_metadata") == 0)
+        return ControlFormType::GetKeyMetadata;
     return ControlFormType::Unknown;
 }
 // ── Benchmark ─────────────────────────────────────────────────────────────────

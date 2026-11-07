@@ -9,12 +9,56 @@
 // by the Rust assert_ser_eq / assert_deser_roundtrip helpers.
 
 #include "control.hpp"
+#include "key_derivation.hpp"
 
 #include <ArduinoJson.h>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <cstring>
 
 using namespace control_form;
+
+TEST_CASE("user key derivation matches Python and Rust v1", "[crypto][user_key]")
+{
+    uint8_t key[32] = {};
+    REQUIRE(derive_user_key(key, "correct horse battery staple", "peer-mesh-01"));
+
+    constexpr uint8_t expected[32] = {0x69, 0x8a, 0x94, 0xe2, 0xfd, 0xec, 0x52, 0x00,
+                                      0x11, 0x3e, 0x6e, 0xd8, 0xd8, 0x9e, 0x8a, 0x7b,
+                                      0x9a, 0x4e, 0xf6, 0x04, 0x1e, 0x0d, 0x0e, 0x06,
+                                      0x3d, 0x87, 0xe9, 0xe7, 0x10, 0x8c, 0xce, 0xe5};
+    REQUIRE(std::memcmp(key, expected, sizeof(expected)) == 0);
+}
+
+static JsonDocument parse(const std::string& json)
+{
+    JsonDocument doc;
+    auto err = deserializeJson(doc, json);
+    REQUIRE(!err);
+    return doc;
+}
+
+TEST_CASE("GetKeyMetadata matches the v3 wire format", "[control][get_key_metadata]")
+{
+    GetKeyMetadata form;
+    JsonDocument request = parse(form.to_json());
+    REQUIRE(request["type"] == "get_key_metadata");
+    REQUIRE(request["metadata"].isNull());
+
+    form.metadata = std::vector<KeyMetadata>{{"key-1", "dist", std::string{"peer-1"}, 120.5}};
+    JsonDocument response = parse(form.to_json());
+    REQUIRE(response["metadata"][0]["objuuid"] == "key-1");
+    REQUIRE(response["metadata"][0]["type"] == "dist");
+    REQUIRE(response["metadata"][0]["agtuuid"] == "peer-1");
+    REQUIRE(response["metadata"][0]["ttl"].as<double>() == Catch::Approx(120.5));
+
+    const auto parsed = GetKeyMetadata::from_json(
+        R"({"type":"get_key_metadata","error":null,"objuuid":null,"coluuid":null,)"
+        R"("metadata":[{"objuuid":"key-1","type":"user","agtuuid":null,"ttl":0}])");
+    REQUIRE(parsed.metadata.has_value());
+    REQUIRE(parsed.metadata->front().type == "user");
+    REQUIRE(!parsed.metadata->front().agtuuid.has_value());
+}
 
 // ── canonical wire JSON from stembot-rust/src/models/control.rs ──────────────
 
@@ -38,15 +82,6 @@ static constexpr const char* BENCHMARK_ERROR_JSON =
     R"({"type":"benchmark","outbound_size":null,"inbound_size":null,"payload":null,"error":"timeout","objuuid":"o1","coluuid":"c1"})";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-
-// Parse a JSON string; REQUIRE parse succeeds.
-static JsonDocument parse(const std::string& json)
-{
-    JsonDocument doc;
-    auto err = deserializeJson(doc, json);
-    REQUIRE(!err);
-    return doc;
-}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // GetConfig

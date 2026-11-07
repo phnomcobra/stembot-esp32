@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.cpp" "configure.cpp" "processor.cpp"
+    SRCS "crypto.cpp" "main.cpp" "configure.cpp" "processor.cpp"
     INCLUDE_DIRS "."
     REQUIRES kvstore
     REQUIRES executor
