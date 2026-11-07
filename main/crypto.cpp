@@ -12,6 +12,9 @@
 #include <mbedtls/base64.h>
 
 TaskHandle_t crypto_task_handle;
+AgentClient client;
+Config config;
+
 const TickType_t poll_ticks = 60000 / portTICK_PERIOD_MS;
 
 static std::string base64_key(const uint8_t key[32])
@@ -53,45 +56,32 @@ static network_message::ExchangeKeys current_key_exchange()
     network_message::ExchangeKeys exchange;
     exchange.src = config.agtuuid;
     exchange.timestamp = get_current_time();
-    if (!config.user_key && config.key_ttl > 0.0)
-    {
-        exchange.distributions.push_back({base64_key(config.key), config.keyuuid, config.key_ttl});
-    }
     return exchange;
 }
 
 void crypto_task(void* p)
 {
     ESP_LOGI("Crypto", "Crypto task started");
-    bool idle = true;
 
     for (;;)
     {
-        if (idle)
-        {
-            config.load();
-            client.set_url(config.peerUrl);
-            client.set_agtuuid(config.agtuuid);
-            client.set_keyuuid(config.keyuuid);
-            client.set_key(config.key);
-            vTaskDelay(poll_ticks);
-        }
+        config.load();
+        client.set_url(config.peerUrl);
+        client.set_agtuuid(config.agtuuid);
+        client.set_keyuuid(config.keyuuid);
+        client.set_key(config.key);
+        vTaskDelay(poll_ticks);
 
-        if (!config.polling)
-        {
-            idle = true;
-            continue;
-        }
+        if (!config.polling) continue;
 
-        std::string exchange_response =
-            client.send_network_message(current_key_exchange().to_json());
-        if (!exchange_response.empty() &&
-            network_message::network_message_type(exchange_response) ==
-                network_message::NetworkMessageType::ExchangeKeys)
+        std::string exchange_response = client.send_network_message(current_key_exchange().to_json());
+        if (
+            !exchange_response.empty() &&
+            network_message::network_message_type(exchange_response) == network_message::NetworkMessageType::ExchangeKeys
+        )
         {
-            process_network_message(exchange_response, false);
+            auto exchange = network_message::ExchangeKeys::from_json(exchange_response);
         }
-
     }
 }
 

@@ -9,7 +9,6 @@
 #include <esp_timer.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <mbedtls/base64.h>
 
 TaskHandle_t processor_task_handle;
 AgentClient client;
@@ -68,28 +67,6 @@ void process_network_message(const std::string& msg_json, bool reply = true)
 
     switch (type)
     {
-    case network_message::NetworkMessageType::ExchangeKeys:
-    {
-        auto exchange = network_message::ExchangeKeys::from_json(msg_json);
-        if (config.debug)
-            ESP_LOGI("Processor", "Processing key exchange from %s", exchange.src.c_str());
-
-        network_message::KeyDistribution* newest = nullptr;
-        for (auto& distribution : exchange.distributions)
-        {
-            if (distribution.ttl > 0.0 && (!newest || distribution.ttl > newest->ttl))
-                newest = &distribution;
-        }
-        if (reply)
-        {
-            auto response = current_key_exchange();
-            response.dest = exchange.src;
-            client.send_network_message(response.to_json());
-        }
-        if (newest)
-            apply_key_distribution(*newest);
-        break;
-    }
     case network_message::NetworkMessageType::TicketRequest:
     {
         if (config.debug)
@@ -179,15 +156,6 @@ void processor_task(void* p)
         {
             idle = true;
             continue;
-        }
-
-        std::string exchange_response =
-            client.send_network_message(current_key_exchange().to_json());
-        if (!exchange_response.empty() &&
-            network_message::network_message_type(exchange_response) ==
-                network_message::NetworkMessageType::ExchangeKeys)
-        {
-            process_network_message(exchange_response, false);
         }
 
         network_message::NetworkMessagesRequest messages_request;
