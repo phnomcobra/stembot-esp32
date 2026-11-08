@@ -72,11 +72,13 @@ public:
     void set_url(const std::string& url) { url_ = url; }
     void set_agtuuid(const std::string& agtuuid) { agtuuid_ = agtuuid; }
     void set_key(const uint8_t key[32]) { std::memcpy(key_, key, 32); }
+    void set_keyuuid(const std::string& keyuuid) { keyuuid_ = keyuuid; }
 
 private:
     std::string url_;
     uint8_t     key_[32];
     std::string agtuuid_;
+    std::string keyuuid_;
 
     // Encrypt plaintext_json, POST to url_, decrypt response.
     std::string post_encrypted(const std::string& plaintext_json);

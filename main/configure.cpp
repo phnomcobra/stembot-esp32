@@ -14,12 +14,12 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_system.h"
-#include "freertos/FreeRTOS.h"
+#include "ethernet.hpp"
 #include "freertos/semphr.h"
 #include "lwip/inet.h"
 #include "lwip/ip_addr.h"
 #include "lwip/netdb.h"
-#include "ethernet.hpp"
+#include "state.hpp"
 #include "time.hpp"
 
 #include <cinttypes>
@@ -27,26 +27,20 @@
 #include <cstring>
 #include <string>
 
-// Global Config instance owned by the TUI.
-static Config g_config;
-
 // ── cmd: list ─────────────────────────────────────────────────────────────────
 
 static int cmd_list(int /*argc*/, char** /*argv*/)
 {
-    char key_hex[65] = {};
-    for (int i = 0; i < 32; i++)
-    {
-        snprintf(key_hex + i * 2, 3, "%02x", static_cast<unsigned>(g_config.key[i]));
-    }
-    printf("  %-16s %.*s\r\n", "agtuuid:", 36, g_config.agtuuid);
-    printf("  %-16s %s\r\n", "key:", key_hex);
-    printf("  %-16s %s\r\n", "peerUrl:", g_config.peerUrl.c_str());
-    printf("  %-16s %s\r\n", "wifiSSID:", g_config.wifiSSID.c_str());
+    printf("  %-16s %.*s\r\n", "agtuuid:", 36, config.agtuuid);
+    printf("  %-16s %.*s\r\n", "keyuuid:", 36, config.keyuuid);
+    printf("  %-16s %s\r\n", "keyType:", key_type_to_string(config.keytype).c_str());
+    printf("  %-16s %.0f seconds\r\n", "keyTTL:", config.get_key_ttl());
+    printf("  %-16s %s\r\n", "peerUrl:", config.peerUrl.c_str());
+    printf("  %-16s %s\r\n", "wifiSSID:", config.wifiSSID.c_str());
     printf("  %-16s %s\r\n",
-           "wifiPassword:", g_config.wifiPassword.empty() ? "(not set)" : "(hidden)");
-    printf("  %-16s %s\r\n", "polling:", g_config.polling ? "true" : "false");
-    printf("  %-16s %s\r\n", "debug:", g_config.debug ? "true" : "false");
+           "wifiPassword:", config.wifiPassword.empty() ? "(not set)" : "(hidden)");
+    printf("  %-16s %s\r\n", "polling:", config.polling ? "true" : "false");
+    printf("  %-16s %s\r\n", "debug:", config.debug ? "true" : "false");
     return 0;
 }
 
@@ -71,31 +65,36 @@ static int cmd_set(int argc, char** argv)
 
     if (strcmp(field, "agtuuid") == 0)
     {
-        strncpy(g_config.agtuuid, value, sizeof(g_config.agtuuid) - 1);
-        g_config.agtuuid[sizeof(g_config.agtuuid) - 1] = '\0';
+        strncpy(config.agtuuid, value, sizeof(config.agtuuid) - 1);
+        config.agtuuid[sizeof(config.agtuuid) - 1] = '\0';
+    }
+    else if (strcmp(field, "keyuuid") == 0)
+    {
+        strncpy(config.keyuuid, value, sizeof(config.keyuuid) - 1);
+        config.keyuuid[sizeof(config.keyuuid) - 1] = '\0';
     }
     else if (strcmp(field, "peerUrl") == 0)
     {
-        g_config.peerUrl = value;
+        config.peerUrl = value;
     }
     else if (strcmp(field, "wifiSSID") == 0)
     {
-        g_config.wifiSSID = value;
+        config.wifiSSID = value;
     }
     else if (strcmp(field, "wifiPassword") == 0)
     {
-        g_config.wifiPassword = value;
+        config.wifiPassword = value;
     }
     else if (strcmp(field, "passphrase") == 0)
     {
-        g_config.set_passphrase(value);
+        config.set_user_key(config.keyuuid, value);
     }
     else if (strcmp(field, "polling") == 0)
     {
         if (strcmp(value, "true") == 0)
-            g_config.polling = true;
+            config.polling = true;
         else if (strcmp(value, "false") == 0)
-            g_config.polling = false;
+            config.polling = false;
         else
         {
             printf("Invalid value for 'polling'. Use 'true' or 'false'.\r\n");
@@ -105,9 +104,9 @@ static int cmd_set(int argc, char** argv)
     else if (strcmp(field, "debug") == 0)
     {
         if (strcmp(value, "true") == 0)
-            g_config.debug = true;
+            config.debug = true;
         else if (strcmp(value, "false") == 0)
-            g_config.debug = false;
+            config.debug = false;
         else
         {
             printf("Invalid value for 'debug'. Use 'true' or 'false'.\r\n");
@@ -116,9 +115,11 @@ static int cmd_set(int argc, char** argv)
     }
     else
     {
-        printf("Unknown field '%s'.\r\n"
-               "Valid fields: agtuuid, peerUrl, wifiSSID, wifiPassword, passphrase, polling, debug\r\n",
-               field);
+        printf(
+            "Unknown field '%s'.\r\n"
+            "Valid fields: agtuuid, keyuuid, peerUrl, wifiSSID, wifiPassword, passphrase, polling, "
+            "debug\r\n",
+            field);
         return 1;
     }
     printf("OK\r\n");
@@ -129,12 +130,12 @@ static int cmd_set(int argc, char** argv)
 
 static int cmd_wifi_connect(int /*argc*/, char** /*argv*/)
 {
-    if (g_config.wifiSSID.empty())
+    if (config.wifiSSID.empty())
     {
         printf("Error: wifiSSID is not set. Use: set wifiSSID <name>\r\n");
         return 1;
     }
-    network_wifi_connect(g_config.wifiSSID, g_config.wifiPassword);
+    network_wifi_connect(config.wifiSSID, config.wifiPassword);
     start_sntp();
     return 0;
 }
@@ -143,7 +144,7 @@ static int cmd_wifi_connect(int /*argc*/, char** /*argv*/)
 
 static int cmd_save(int /*argc*/, char** /*argv*/)
 {
-    g_config.save();
+    config.save();
     printf("OK\r\n");
     return 0;
 }
@@ -327,8 +328,9 @@ static void register_commands()
     ESP_ERROR_CHECK(esp_console_cmd_register(&list_cmd));
 
     // set
-    s_set_args.field = arg_str1(nullptr, nullptr, "<field>",
-                                "agtuuid | peerUrl | wifiSSID | wifiPassword | passphrase | polling | debug");
+    s_set_args.field = arg_str1(
+        nullptr, nullptr, "<field>",
+        "agtuuid | keyuuid | peerUrl | wifiSSID | wifiPassword | passphrase | polling | debug");
     s_set_args.value = arg_str1(nullptr, nullptr, "<value>", "New value");
     s_set_args.end = arg_end(2);
     esp_console_cmd_t set_cmd =

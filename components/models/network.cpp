@@ -3,9 +3,99 @@
 #include "utils.hpp"
 
 #include <ArduinoJson.h>
+#include <algorithm>
+#include <mbedtls/base64.h>
 
 namespace network_message
 {
+
+namespace
+{
+const KeyDistribution* best_distribution(const std::vector<KeyDistribution>& distributions)
+{
+    if (distributions.empty())
+        return nullptr;
+    return &*std::max_element(distributions.begin(), distributions.end(),
+                              [](const KeyDistribution& left, const KeyDistribution& right)
+                              { return left.ttl < right.ttl; });
+}
+} // namespace
+
+std::string ExchangeKeys::to_json() const
+{
+    JsonDocument doc;
+    doc["type"] = "exchange_keys";
+    set_opt_str(doc, "dest", dest);
+    doc["src"] = src;
+    set_opt_str(doc, "isrc", isrc);
+    set_opt_f64(doc, "timestamp", timestamp);
+    set_opt_str(doc, "objuuid", objuuid);
+    set_opt_str(doc, "coluuid", coluuid);
+    JsonArray distributions_json = doc["distributions"].to<JsonArray>();
+    for (const auto& distribution : distributions)
+    {
+        JsonObject item = distributions_json.add<JsonObject>();
+        item["b64_key"] = distribution.b64_key;
+        item["objuuid"] = distribution.objuuid;
+        item["ttl"] = distribution.ttl;
+    }
+    std::string out;
+    serializeJson(doc, out);
+    return out;
+}
+
+ExchangeKeys ExchangeKeys::from_json(const std::string& json)
+{
+    ExchangeKeys message;
+    JsonDocument doc;
+    deserializeJson(doc, json);
+    message.src = doc["src"] | std::string{};
+    message.dest = get_opt_str(doc["dest"]);
+    message.isrc = get_opt_str(doc["isrc"]);
+    message.timestamp = get_opt_f64(doc["timestamp"]);
+    message.objuuid = get_opt_str(doc["objuuid"]);
+    message.coluuid = get_opt_str(doc["coluuid"]);
+    for (JsonObjectConst item : doc["distributions"].as<JsonArrayConst>())
+    {
+        KeyDistribution distribution;
+        distribution.b64_key = item["b64_key"] | std::string{};
+        distribution.objuuid = item["objuuid"] | std::string{};
+        distribution.ttl = item["ttl"] | 0.0;
+        message.distributions.push_back(std::move(distribution));
+    }
+    return message;
+}
+
+std::optional<std::string> ExchangeKeys::best_key_uuid() const
+{
+    const KeyDistribution* distribution = best_distribution(distributions);
+    if (distribution == nullptr)
+        return std::nullopt;
+    return distribution->objuuid;
+}
+
+std::optional<std::array<uint8_t, 32>> ExchangeKeys::best_key() const
+{
+    const KeyDistribution* distribution = best_distribution(distributions);
+    if (distribution == nullptr)
+        return std::nullopt;
+    std::array<uint8_t, 32> key = {};
+    size_t decoded_size = 0;
+    if (mbedtls_base64_decode(key.data(), key.size(), &decoded_size,
+                              reinterpret_cast<const unsigned char*>(distribution->b64_key.data()),
+                              distribution->b64_key.size()) != 0 ||
+        decoded_size != key.size())
+        return std::nullopt;
+    return key;
+}
+
+std::optional<double> ExchangeKeys::best_key_ttl() const
+{
+    const KeyDistribution* distribution = best_distribution(distributions);
+    if (distribution == nullptr)
+        return std::nullopt;
+    return distribution->ttl;
+}
 
 // ── Ping ──────────────────────────────────────────────────────────────────────
 
@@ -262,6 +352,8 @@ NetworkMessageType network_message_type(const std::string& json)
     const char* type = doc["type"] | "";
     if (strcmp(type, "ping") == 0)
         return NetworkMessageType::Ping;
+    if (strcmp(type, "exchange_keys") == 0)
+        return NetworkMessageType::ExchangeKeys;
     if (strcmp(type, "messages_request") == 0)
         return NetworkMessageType::MessagesRequest;
     if (strcmp(type, "messages_response") == 0)

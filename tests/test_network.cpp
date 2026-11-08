@@ -15,6 +15,48 @@
 
 using namespace network_message;
 
+static JsonDocument parse(const std::string& json)
+{
+    JsonDocument doc;
+    auto err = deserializeJson(doc, json);
+    REQUIRE(!err);
+    return doc;
+}
+
+TEST_CASE("ExchangeKeys matches the v3 wire format", "[network][exchange_keys]")
+{
+    ExchangeKeys exchange;
+    exchange.src = "a1";
+    exchange.dest = "a2";
+    exchange.timestamp = 1000.0;
+    exchange.distributions.push_back({"d0", "key-1", 3600.0});
+
+    JsonDocument doc = parse(exchange.to_json());
+    REQUIRE(doc["type"] == "exchange_keys");
+    REQUIRE(doc["src"] == "a1");
+    REQUIRE(doc["dest"] == "a2");
+    REQUIRE(doc["distributions"][0]["b64_key"] == "d0");
+    REQUIRE(doc["distributions"][0]["objuuid"] == "key-1");
+    REQUIRE(doc["distributions"][0]["ttl"].as<double>() == Catch::Approx(3600.0));
+
+    REQUIRE(network_message_type(exchange.to_json()) == NetworkMessageType::ExchangeKeys);
+}
+
+TEST_CASE("ExchangeKeys selects the distribution with the highest TTL", "[network][exchange_keys]")
+{
+    ExchangeKeys exchange;
+    exchange.distributions = {
+        {"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "older", 30.0},
+        {"d0ebLuGBXzks025c/kmvGn+qmbwqwTkfjCH4F87YuqQ=", "current", 120.0},
+        {"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=", "newer", 90.0},
+    };
+
+    REQUIRE(exchange.best_key_uuid().has_value());
+    REQUIRE(*exchange.best_key_uuid() == "current");
+    REQUIRE(exchange.best_key().has_value());
+    REQUIRE((*exchange.best_key())[0] == 0x77);
+}
+
 // ── canonical wire JSON from stembot-rust/src/models/network.rs ──────────────
 
 static constexpr const char* PING_JSON =
@@ -77,14 +119,6 @@ static constexpr const char* NT_RESPONSE_JSON =
     R"("status":0,"start_time":1000.0,"elapsed_time":0.1}})";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-
-static JsonDocument parse(const std::string& json)
-{
-    JsonDocument doc;
-    auto err = deserializeJson(doc, json);
-    REQUIRE(!err);
-    return doc;
-}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Ping

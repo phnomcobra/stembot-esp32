@@ -90,6 +90,7 @@ stembot> list
 
 # 2. Set individual fields
 stembot> set agtuuid  <uuid>
+stembot> set keyuuid  <key-uuid>
 stembot> set peerUrl  http://192.168.1.10:8080/mpi
 stembot> set wifiSSID MyNetwork
 stembot> set wifiPassword MyPassword
@@ -110,15 +111,20 @@ stembot> reboot
 | Command | Description |
 |---|---|
 | `list` | Show all current configuration values. |
-| `set <field> <value>` | Set a configuration field in memory. Changes are not persisted until `save` is run. Valid fields: `agtuuid`, `peerUrl`, `wifiSSID`, `wifiPassword`, `passphrase`. |
+| `set <field> <value>` | Set a configuration field in memory. Changes are not persisted until `save` is run. Valid fields: `agtuuid`, `keyuuid`, `peerUrl`, `wifiSSID`, `wifiPassword`, `passphrase`, `polling`, `debug`. Set `keyuuid` before setting `passphrase`, which derives and selects a user key for that UUID; the passphrase itself is not stored. |
 | `save` | Write current in-memory configuration to NVS flash. |
 | `reboot` | Reboot the device. |
 | `wifi_connect` | Connect to Wi-Fi using the stored `wifiSSID` and `wifiPassword`. |
 | `ping <host> [-c <n>]` | Send ICMP echo requests to a hostname or IP address. |
 | `net_info` | Show the current IP address, netmask, gateway, and DNS server. |
+| `get_config` | Debug stub — prints the control-form JSON that would be dispatched for a `GetConfig` request. |
 | `help` | List all registered commands with their descriptions. |
 
-> **Note:** `set` only updates in-memory values. Always run `save` before `reboot`
-> to make changes permanent. The encryption passphrase is stored as a derived
-> AES-256 key; the raw passphrase is not retained after `save`.
-
+> **Note:** `set` only updates in-memory values. Always run `save` before
+> `reboot` to make changes permanent. On first boot, or whenever no key has
+> been saved to NVS, the encryption key defaults to all-zero bytes — set a
+> `passphrase` (or wait for the agent to complete a key exchange with its
+> peer) before expecting successful encrypted communication. While polling,
+> the agent exchanges distributed keys with its peer and rotates to the most
+> current received key. It keeps only the active key and UUID locally; no
+> keystore is used on the ESP32.

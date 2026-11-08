@@ -13,6 +13,7 @@
 
 #include "control.hpp"
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -20,6 +21,13 @@
 
 namespace network_message
 {
+
+struct KeyDistribution
+{
+    std::string b64_key;
+    std::string objuuid;
+    double ttl = 0.0;
+};
 
 // ── Hop ───────────────────────────────────────────────────────────────────────
 // A single hop recorded when tracing a ticket through the network.
@@ -48,6 +56,24 @@ struct Ping
     static Ping from_json(const std::string& json);
 };
 
+struct ExchangeKeys
+{
+    std::vector<KeyDistribution> distributions;
+    std::string src;
+    std::optional<std::string> dest;
+    std::optional<std::string> isrc;
+    std::optional<double> timestamp;
+    std::optional<std::string> objuuid;
+    std::optional<std::string> coluuid;
+
+    std::string to_json() const;
+    std::optional<std::string> best_key_uuid() const;
+    std::optional<std::array<uint8_t, 32>> best_key() const;
+    std::optional<double> best_key_ttl() const;
+
+    static ExchangeKeys from_json(const std::string& json);
+};
+
 // ── NetworkMessagesRequest ────────────────────────────────────────────────────
 // Wire type tag: "messages_request"
 
@@ -58,8 +84,10 @@ struct NetworkMessagesRequest
     std::optional<std::string> isrc;
     std::optional<double> timestamp;
     std::optional<int64_t> limit; // null means "no limit"
-    std::optional<std::vector<std::string>> network_whitelist; // null means "all network message types"
-    std::optional<std::vector<std::string>> control_whitelist; // null means "all control form types"
+    std::optional<std::vector<std::string>>
+        network_whitelist; // null means "all network message types"
+    std::optional<std::vector<std::string>>
+        control_whitelist; // null means "all control form types"
     std::optional<std::string> objuuid;
     std::optional<std::string> coluuid;
 
@@ -168,6 +196,7 @@ enum class NetworkMessageType
     TicketTraceResponse,
     TicketRequest,
     TicketResponse,
+    ExchangeKeys,
     Unknown
 };
 

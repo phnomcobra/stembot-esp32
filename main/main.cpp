@@ -1,15 +1,14 @@
-#include "config.hpp"
-#include "esp_log.h"
 #include "ethernet.hpp"
+#include "state.hpp"
 #include "time.hpp"
 
 extern void start_console();
 extern void start_processor();
+extern void start_crypto();
 
 extern "C" void app_main(void)
 {
-    // Load configuration from NVS.
-    Config config;
+    // config is loaded from NVS on construction (see state.hpp).
 
     // Bring up the network interface.
     // QEMU build: OpenCores Ethernet + DHCP (ssid/password ignored).
@@ -22,6 +21,9 @@ extern "C" void app_main(void)
     // Start the serial configuration TUI in its own FreeRTOS task.
     // Returns immediately; the REPL runs in the background.
     start_console();
+
+    // Start the crypto task.
+    start_crypto();
 
     // Start the processor in its own FreeRTOS task.
     // Returns immediately; the processor runs in the background.

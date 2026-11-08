@@ -90,6 +90,7 @@ std::string AgentClient::post_encrypted(const std::string& plaintext_json)
 
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_header(client, "Content-Type", "application/binary");
+    esp_http_client_set_header(client, "Key-UUID", keyuuid_.c_str());
     esp_http_client_set_header(client, "Nonce", nonce_hex.c_str());
     esp_http_client_set_header(client, "Tag", tag_hex.c_str());
     esp_http_client_set_post_field(client, reinterpret_cast<const char*>(enc.ciphertext.data()),
