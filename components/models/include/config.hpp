@@ -15,8 +15,7 @@ class Config
 
     void save();
     void load();
-    void set_passphrase(const std::string& keyuuid, const std::string& passphrase);
-    void set_user_key(const std::string& uuid, const std::string& passphrase);
+    void set_user_key(const std::string& keyuuid, const std::string& passphrase);
     double get_key_ttl();
 
     std::string to_json() const;

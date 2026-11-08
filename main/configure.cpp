@@ -87,7 +87,7 @@ static int cmd_set(int argc, char** argv)
     }
     else if (strcmp(field, "passphrase") == 0)
     {
-        config.set_passphrase(config.keyuuid, value);
+        config.set_user_key(config.keyuuid, value);
     }
     else if (strcmp(field, "polling") == 0)
     {
