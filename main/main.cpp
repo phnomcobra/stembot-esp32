@@ -1,5 +1,5 @@
-#include "config.hpp"
 #include "ethernet.hpp"
+#include "state.hpp"
 #include "time.hpp"
 
 extern void start_console();
@@ -9,7 +9,7 @@ extern void start_crypto();
 extern "C" void app_main(void)
 {
     // Load configuration from NVS.
-    Config config;
+    Config& config = shared_config();
 
     // Bring up the network interface.
     // QEMU build: OpenCores Ethernet + DHCP (ssid/password ignored).

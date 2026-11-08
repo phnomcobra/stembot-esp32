@@ -15,11 +15,11 @@
 #include "esp_netif.h"
 #include "esp_system.h"
 #include "ethernet.hpp"
-#include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "lwip/inet.h"
 #include "lwip/ip_addr.h"
 #include "lwip/netdb.h"
+#include "state.hpp"
 #include "time.hpp"
 
 #include <cinttypes>
@@ -28,21 +28,16 @@
 #include <string>
 
 // Global Config instance owned by the TUI.
-static Config g_config;
+static Config& g_config = shared_config();
 
 // ── cmd: list ─────────────────────────────────────────────────────────────────
 
 static int cmd_list(int /*argc*/, char** /*argv*/)
 {
-    char key_hex[65] = {};
-    for (int i = 0; i < 32; i++)
-    {
-        snprintf(key_hex + i * 2, 3, "%02x", static_cast<unsigned>(g_config.key[i]));
-    }
     printf("  %-16s %.*s\r\n", "agtuuid:", 36, g_config.agtuuid);
     printf("  %-16s %.*s\r\n", "keyuuid:", 36, g_config.keyuuid);
     printf("  %-16s %s\r\n", "keyType:", key_type_to_string(g_config.keytype).c_str());
-    printf("  %-16s %s\r\n", "key:", key_hex);
+    printf("  %-16s %.0f seconds\r\n", "keyTTL:", g_config.get_key_ttl());
     printf("  %-16s %s\r\n", "peerUrl:", g_config.peerUrl.c_str());
     printf("  %-16s %s\r\n", "wifiSSID:", g_config.wifiSSID.c_str());
     printf("  %-16s %s\r\n",
@@ -130,25 +125,6 @@ static int cmd_set(int argc, char** argv)
             field);
         return 1;
     }
-    printf("OK\r\n");
-    return 0;
-}
-
-static struct
-{
-    struct arg_str* uuid;
-    struct arg_str* passphrase;
-    struct arg_end* end;
-} s_user_key_args;
-
-static int cmd_set_user_key(int argc, char** argv)
-{
-    if (arg_parse(argc, argv, reinterpret_cast<void**>(&s_user_key_args)) != 0)
-    {
-        arg_print_errors(stdout, s_user_key_args.end, argv[0]);
-        return 1;
-    }
-    g_config.set_user_key(s_user_key_args.uuid->sval[0], s_user_key_args.passphrase->sval[0]);
     printf("OK\r\n");
     return 0;
 }
@@ -363,14 +339,6 @@ static void register_commands()
     esp_console_cmd_t set_cmd =
         make_cmd("set", "Set a configuration field and persist it to NVS", cmd_set, &s_set_args);
     ESP_ERROR_CHECK(esp_console_cmd_register(&set_cmd));
-
-    s_user_key_args.uuid = arg_str1(nullptr, nullptr, "<keyuuid>", "UUID for the user key");
-    s_user_key_args.passphrase = arg_str1(nullptr, nullptr, "<passphrase>", "User key passphrase");
-    s_user_key_args.end = arg_end(2);
-    esp_console_cmd_t user_key_cmd =
-        make_cmd("set_user_key", "Set the active user key from a UUID and passphrase",
-                 cmd_set_user_key, &s_user_key_args);
-    ESP_ERROR_CHECK(esp_console_cmd_register(&user_key_cmd));
 
     // wifi_connect
     esp_console_cmd_t wifi_cmd =

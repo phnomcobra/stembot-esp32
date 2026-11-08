@@ -2,6 +2,7 @@
 #include "config.hpp"
 #include "control.hpp"
 #include "network.hpp"
+#include "state.hpp"
 #include "time.hpp"
 
 #include <ArduinoJson.h>
@@ -11,8 +12,8 @@
 #include <freertos/task.h>
 
 TaskHandle_t processor_task_handle;
-AgentClient client;
-Config config;
+static AgentClient& client = shared_agent_client();
+static Config& config = shared_config();
 
 std::string process_control_form(const std::string& form_json)
 {
@@ -144,7 +145,6 @@ void processor_task(void* p)
     {
         if (idle)
         {
-            config.load();
             client.set_url(config.peerUrl);
             client.set_agtuuid(config.agtuuid);
             client.set_keyuuid(config.keyuuid);

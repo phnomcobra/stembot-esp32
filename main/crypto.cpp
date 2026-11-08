@@ -2,6 +2,7 @@
 #include "config.hpp"
 #include "control.hpp"
 #include "network.hpp"
+#include "state.hpp"
 #include "time.hpp"
 
 #include <ArduinoJson.h>
@@ -11,8 +12,9 @@
 #include <freertos/task.h>
 
 TaskHandle_t crypto_task_handle;
-extern AgentClient client;
-extern Config config;
+
+static AgentClient& client = shared_agent_client();
+static Config& config = shared_config();
 
 static network_message::ExchangeKeys current_key_exchange()
 {
@@ -28,7 +30,6 @@ void crypto_task(void* p)
 
     for (;;)
     {
-        config.load();
         client.set_url(config.peerUrl);
         client.set_agtuuid(config.agtuuid);
         client.set_keyuuid(config.keyuuid);
@@ -78,6 +79,7 @@ void crypto_task(void* p)
                 sizeof(config.keyuuid) - 1);
         config.keyuuid[sizeof(config.keyuuid) - 1] = '\0';
         config.keyExpireTime = get_current_time() + exchange.best_key_ttl().value();
+        config.keytype = KeyType::DIST;
         config.save();
     }
 }
