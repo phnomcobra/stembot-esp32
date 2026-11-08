@@ -27,23 +27,20 @@
 #include <cstring>
 #include <string>
 
-// Global Config instance owned by the TUI.
-static Config& g_config = shared_config();
-
 // ── cmd: list ─────────────────────────────────────────────────────────────────
 
 static int cmd_list(int /*argc*/, char** /*argv*/)
 {
-    printf("  %-16s %.*s\r\n", "agtuuid:", 36, g_config.agtuuid);
-    printf("  %-16s %.*s\r\n", "keyuuid:", 36, g_config.keyuuid);
-    printf("  %-16s %s\r\n", "keyType:", key_type_to_string(g_config.keytype).c_str());
-    printf("  %-16s %.0f seconds\r\n", "keyTTL:", g_config.get_key_ttl());
-    printf("  %-16s %s\r\n", "peerUrl:", g_config.peerUrl.c_str());
-    printf("  %-16s %s\r\n", "wifiSSID:", g_config.wifiSSID.c_str());
+    printf("  %-16s %.*s\r\n", "agtuuid:", 36, config.agtuuid);
+    printf("  %-16s %.*s\r\n", "keyuuid:", 36, config.keyuuid);
+    printf("  %-16s %s\r\n", "keyType:", key_type_to_string(config.keytype).c_str());
+    printf("  %-16s %.0f seconds\r\n", "keyTTL:", config.get_key_ttl());
+    printf("  %-16s %s\r\n", "peerUrl:", config.peerUrl.c_str());
+    printf("  %-16s %s\r\n", "wifiSSID:", config.wifiSSID.c_str());
     printf("  %-16s %s\r\n",
-           "wifiPassword:", g_config.wifiPassword.empty() ? "(not set)" : "(hidden)");
-    printf("  %-16s %s\r\n", "polling:", g_config.polling ? "true" : "false");
-    printf("  %-16s %s\r\n", "debug:", g_config.debug ? "true" : "false");
+           "wifiPassword:", config.wifiPassword.empty() ? "(not set)" : "(hidden)");
+    printf("  %-16s %s\r\n", "polling:", config.polling ? "true" : "false");
+    printf("  %-16s %s\r\n", "debug:", config.debug ? "true" : "false");
     return 0;
 }
 
@@ -68,36 +65,36 @@ static int cmd_set(int argc, char** argv)
 
     if (strcmp(field, "agtuuid") == 0)
     {
-        strncpy(g_config.agtuuid, value, sizeof(g_config.agtuuid) - 1);
-        g_config.agtuuid[sizeof(g_config.agtuuid) - 1] = '\0';
+        strncpy(config.agtuuid, value, sizeof(config.agtuuid) - 1);
+        config.agtuuid[sizeof(config.agtuuid) - 1] = '\0';
     }
     else if (strcmp(field, "keyuuid") == 0)
     {
-        strncpy(g_config.keyuuid, value, sizeof(g_config.keyuuid) - 1);
-        g_config.keyuuid[sizeof(g_config.keyuuid) - 1] = '\0';
+        strncpy(config.keyuuid, value, sizeof(config.keyuuid) - 1);
+        config.keyuuid[sizeof(config.keyuuid) - 1] = '\0';
     }
     else if (strcmp(field, "peerUrl") == 0)
     {
-        g_config.peerUrl = value;
+        config.peerUrl = value;
     }
     else if (strcmp(field, "wifiSSID") == 0)
     {
-        g_config.wifiSSID = value;
+        config.wifiSSID = value;
     }
     else if (strcmp(field, "wifiPassword") == 0)
     {
-        g_config.wifiPassword = value;
+        config.wifiPassword = value;
     }
     else if (strcmp(field, "passphrase") == 0)
     {
-        g_config.set_passphrase(g_config.keyuuid, value);
+        config.set_passphrase(config.keyuuid, value);
     }
     else if (strcmp(field, "polling") == 0)
     {
         if (strcmp(value, "true") == 0)
-            g_config.polling = true;
+            config.polling = true;
         else if (strcmp(value, "false") == 0)
-            g_config.polling = false;
+            config.polling = false;
         else
         {
             printf("Invalid value for 'polling'. Use 'true' or 'false'.\r\n");
@@ -107,9 +104,9 @@ static int cmd_set(int argc, char** argv)
     else if (strcmp(field, "debug") == 0)
     {
         if (strcmp(value, "true") == 0)
-            g_config.debug = true;
+            config.debug = true;
         else if (strcmp(value, "false") == 0)
-            g_config.debug = false;
+            config.debug = false;
         else
         {
             printf("Invalid value for 'debug'. Use 'true' or 'false'.\r\n");
@@ -133,12 +130,12 @@ static int cmd_set(int argc, char** argv)
 
 static int cmd_wifi_connect(int /*argc*/, char** /*argv*/)
 {
-    if (g_config.wifiSSID.empty())
+    if (config.wifiSSID.empty())
     {
         printf("Error: wifiSSID is not set. Use: set wifiSSID <name>\r\n");
         return 1;
     }
-    network_wifi_connect(g_config.wifiSSID, g_config.wifiPassword);
+    network_wifi_connect(config.wifiSSID, config.wifiPassword);
     start_sntp();
     return 0;
 }
@@ -147,7 +144,7 @@ static int cmd_wifi_connect(int /*argc*/, char** /*argv*/)
 
 static int cmd_save(int /*argc*/, char** /*argv*/)
 {
-    g_config.save();
+    config.save();
     printf("OK\r\n");
     return 0;
 }

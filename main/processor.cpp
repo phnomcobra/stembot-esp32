@@ -12,8 +12,6 @@
 #include <freertos/task.h>
 
 TaskHandle_t processor_task_handle;
-static AgentClient& client = shared_agent_client();
-static Config& config = shared_config();
 
 std::string process_control_form(const std::string& form_json)
 {

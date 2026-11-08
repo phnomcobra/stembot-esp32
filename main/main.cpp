@@ -8,8 +8,7 @@ extern void start_crypto();
 
 extern "C" void app_main(void)
 {
-    // Load configuration from NVS.
-    Config& config = shared_config();
+    // config is loaded from NVS on construction (see state.hpp).
 
     // Bring up the network interface.
     // QEMU build: OpenCores Ethernet + DHCP (ssid/password ignored).

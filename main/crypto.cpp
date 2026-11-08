@@ -13,9 +13,6 @@
 
 TaskHandle_t crypto_task_handle;
 
-static AgentClient& client = shared_agent_client();
-static Config& config = shared_config();
-
 static network_message::ExchangeKeys current_key_exchange()
 {
     network_message::ExchangeKeys exchange;
